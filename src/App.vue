@@ -633,7 +633,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                   <td>{{ g.deck ?? '—' }}</td>
                   <td>{{ g.disc ?? '—' }}</td>
                   <td>{{ g.time }}</td>
-                  <td class="gid">{{ g.gid }}</td>
                   <td class="seed">{{ g.seed }}</td>
                   <td class="ops">
                     <button class="replay-btn" title="用该种子重开一局" @click="replaySeed(g.seed)">重开</button>
