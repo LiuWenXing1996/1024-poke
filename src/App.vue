@@ -231,17 +231,31 @@ function onDiscardClick() {
 }
 
 // 出牌：先记下手牌位置，落桌后让新 token 从手牌位置飞入（FLIP）
+// 同时对已有 token 做 FLIP 平滑补位——居中 flex 整行重排若瞬移会抽搐
 // 胡牌不自动结算——凑到 1024 后亮出「胡」按钮，由玩家手动触发
 function placeWithFly(idx: number, ch: number | OpSymbol) {
   const hs = handSlots.value.find(h => h.idx === idx)
   const el = hs ? document.querySelector<HTMLElement>(`.hand .card[data-slot="${hs.s}"]`) : null
   const from = el ? el.getBoundingClientRect() : null
+  const prevRects = Array.from(document.querySelectorAll<HTMLElement>('.expr .tok')).map(t => t.getBoundingClientRect())
   place(idx, ch, { deferHu: true })
 
   if (!from) return
   nextTick(() => {
-    const tok = document.querySelector<HTMLElement>('.expr .tok:last-child')
+    const toks = document.querySelectorAll<HTMLElement>('.expr .tok')
+    const tok = toks[toks.length - 1]
     if (!tok) return
+    tok.style.animation = 'none'   // 入场交给飞入动画，屏蔽 CSS pop（两者同抢 transform 会抖）
+    toks.forEach((t, i) => {       // 旧 token 平滑补位
+      const prev = prevRects[i]
+      if (!prev) return
+      const now = t.getBoundingClientRect()
+      const dx = prev.left - now.left, dy = prev.top - now.top
+      if (dx || dy) t.animate(
+        [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0,0)' }],
+        { duration: 200, easing: 'ease-out' },
+      )
+    })
     const to = tok.getBoundingClientRect()
     const dx = from.left + from.width / 2 - (to.left + to.width / 2)
     const dy = from.top + from.height / 2 - (to.top + to.height / 2)
