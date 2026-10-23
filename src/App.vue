@@ -156,7 +156,8 @@ watch(() => fx.undoPlaceAt, () => {
   fly.animate(
     [
       { transform: 'translate(0,0) rotate(0deg) scale(1)' },
-      { transform: `translate(${dx}px, ${dy}px) rotate(-8deg) scale(${scale})` },
+      { transform: `translate(${dx * 0.5}px, ${dy * 0.5}px) rotate(-6deg) scale(${(1 + scale) / 2})`, offset: 0.7 },
+      { transform: `translate(${dx}px, ${dy}px) rotate(0deg) scale(${scale})` },
     ],
     { duration: 380, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' },
   )
