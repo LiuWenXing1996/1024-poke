@@ -565,7 +565,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           <li><b>胡牌</b>：牌桌总值恰好等于1024就能发起胡牌，胡牌后桌面上的牌会洗回牌库</li>
           <li><b>撤销</b>：放牌，补牌，弃牌这些操作都可以撤销，但是胡牌不可撤销</li>
         </ul>
-        <div class="actions"><button class="btn primary" @click="closeSheet()">知道了</button></div>
       </template>
 
       <template v-else-if="sheet.kind === 'restart'">
