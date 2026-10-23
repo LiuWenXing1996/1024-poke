@@ -4,7 +4,7 @@ import { HAND_SIZE, TARGET, val } from './engine/engine'
 import { OPS, rankLabel } from './engine/cards'
 import type { Card, OpSymbol } from './engine/types'
 import {
-  S, fx, sheets, closeSheet, openSheet, resumeGame, restoreGame, peekSave, loadHist, loadStates, deleteHistEntry, deleteSave, clearHist, URL_SEED, toast,
+  S, fx, sheets, closeSheet, openSheet, resumeGame, restoreGame, peekSave, loadStates, deleteSave, clearSaves, URL_SEED, toast,
 } from './game/state'
 import {
   place, drawToFull, undo, doDiscard, newGame, doHu,
@@ -403,35 +403,19 @@ const pileCells = computed(() => {
   }
 })
 
-// ---- 弹层：历史对局 ----
+// ---- 弹层：存档（快照卡片列表） ----
 // localStorage 不在响应式系统里，histVer 手动挡版本号触发重算
 const histVer = ref(0)
-const histRows = computed(() => {
-  histVer.value
-  if (!sheets.value.some(s => s.kind === 'history')) return []
-  const states = loadStates()
-  return loadHist().map((g, i) => {
-    const d = new Date(g.ts), p2 = (n: number) => String(n).padStart(2, '0')
-    return { n: i + 1, gid: g.gid, hu: g.hu, seed: g.seed, cur: g.gid === S.gid, resume: g.gid !== S.gid && !!states[String(g.gid)], deck: g.gid === S.gid ? S.deck.length : g.deck, disc: g.gid === S.gid ? S.discarded : g.discarded, hand: g.gid === S.gid ? S.hand.length : g.hand, tbl: g.gid === S.gid ? S.table.length : g.table, time: `${d.getMonth() + 1}/${d.getDate()} ${p2(d.getHours())}:${p2(d.getMinutes())}` }
-  })
-})
-
-function removeHist(index: number) {
-  deleteHistEntry(index)
-  histVer.value++
-}
-
-// ---- 弹层：存档（快照槽卡片列表） ----
 const saveCards = computed(() => {
   histVer.value
   if (!sheets.value.some(s => s.kind === 'saves')) return []
-  const states = loadStates()
-  return loadHist()
-    .filter(g => !!states[String(g.gid)])
-    .map(g => {
-      const d = new Date(g.ts), p2 = (n: number) => String(n).padStart(2, '0')
-      return { gid: g.gid, hu: g.hu, seed: g.seed, cur: g.gid === S.gid, deck: g.deck, disc: g.discarded, hand: g.hand, tbl: g.table, time: `${d.getMonth() + 1}/${d.getDate()} ${p2(d.getHours())}:${p2(d.getMinutes())}` }
+  return Object.entries(loadStates())
+    .map(([gid, slot]) => {
+      const st = JSON.parse(slot.snap) as { hu: number; seed: number; deck: Card[]; discarded: number; hand: Card[]; table: Card[] }
+      const d = new Date(slot.ts), p2 = (n: number) => String(n).padStart(2, '0')
+      return { gid: Number(gid), ts: slot.ts, hu: st.hu, seed: st.seed, cur: Number(gid) === S.gid, deck: st.deck.length, disc: st.discarded, hand: st.hand.length, tbl: st.table.length, time: `${d.getMonth() + 1}/${d.getDate()} ${p2(d.getHours())}:${p2(d.getMinutes())}` }
     })
+    .sort((a, b) => b.ts - a.ts)
 })
 
 function openSave(gid: number) {
@@ -442,23 +426,8 @@ function deleteSaveSlot(gid: number) {
   histVer.value++
   closeSheet()   // 只关确认层
 }
-
-// 单条删除：确认框浮在历史弹窗上，确认后只关确认层
-function confirmDeleteEntry() {
-  const idx = sheet.value?.payload?.index as number
-  removeHist(idx)
-  closeSheet()
-}
-
-// 恢复历史对局继续玩（当前局进度先入快照槽，随时可切回来）
-function resumeHist(gid: number) {
-  if (restoreGame(gid)) histVer.value++
-}
-
-// 全部清空：先弹确认框（当前对局保留）
-function clearAllHist() { openSheet('confirmClear') }
-function confirmClearAll() {
-  clearHist()
+function clearAllSaves() {
+  clearSaves()
   histVer.value++
   closeSheet()
 }
@@ -513,7 +482,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
     <div class="top-actions">
       <button class="icon-btn" aria-label="规则" @click="openSheet('help')">?</button>
       <button class="top-btn" @click="openSheet('restart')">重开</button>
-      <button class="top-btn" title="历史对局" @click="openSheet('history')">历史</button>
       <button class="top-btn" title="存档：可恢复继续玩的牌局" @click="openSheet('saves')">存档</button>
       <button v-if="isDev" class="top-btn" title="强制胡牌（仅开发模式）" @click="onHuClick()">强胡</button>
     </div>
@@ -591,7 +559,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   <!-- 弹层栈：每层独立实例，后开的叠在上层 -->
   <div class="overlay" :class="{ show: sheets.length > 0 }">
     <div v-for="(s, li) in sheets" :key="li" class="sheet-layer" @click.self="closeLayer(li)">
-    <div class="sheet" :class="{ wide: ['history', 'huLog', 'pile', 'saves'].includes(s.kind), history: s.kind === 'history', help: s.kind === 'help' }">
+    <div class="sheet" :class="{ wide: ['huLog', 'pile', 'saves'].includes(s.kind), help: s.kind === 'help' }">
       <button v-if="s.kind !== 'start'" class="sheet-close" title="关闭" @click="closeLayer(li)">×</button>
       <template v-if="s.kind === 'help'">
         <h2>怎么玩</h2>
@@ -652,60 +620,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <div class="actions"><button class="btn primary" @click="closeSheet()">知道了</button></div>
       </template>
 
-      <template v-else-if="s.kind === 'history'">
-        <div class="sheet-head">
-          <h2>历史对局 · {{ histRows.length }} 局</h2>
-        </div>
-        <div class="sheet-body">
-          <template v-if="histRows.length">
-            <table class="hist-tbl">
-              <thead>
-                <tr><th>对局 ID</th><th>胡数</th><th>牌库</th><th>弃牌</th><th>手牌</th><th>牌桌</th><th>时间</th><th>种子</th><th>操作</th></tr>
-              </thead>
-              <tbody>
-                <tr v-for="g in histRows" :key="g.n">
-                  <td class="gid"><span v-if="g.cur" class="cur-tag">当前</span>{{ g.gid }}</td>
-                  <td><b>{{ g.hu }}</b></td>
-                  <td>{{ g.deck ?? '—' }}</td>
-                  <td>{{ g.disc ?? '—' }}</td>
-                  <td>{{ g.hand ?? '—' }}</td>
-                  <td>{{ g.tbl ?? '—' }}</td>
-                  <td>{{ g.time }}</td>
-                  <td class="seed">{{ g.seed }}</td>
-                  <td class="ops">
-                    <button v-if="g.resume" class="replay-btn" title="恢复这局继续玩（当前局进度会先存档）" @click="resumeHist(g.gid)">继续</button>
-                    <button class="replay-btn" title="用该种子重开一局" @click="replaySeed(g.seed)">重开</button>
-                    <button v-if="!g.cur" class="del-btn" title="删除这条记录" @click="openSheet('confirmDelete', { index: g.n - 1 })">×</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </template>
-          <p v-else>还没有完成的对局</p>
-        </div>
-        <div v-if="histRows.length" class="hist-foot">
-          <button class="clear-btn" @click="clearAllHist">清空</button>
-        </div>
-      </template>
-
-      <template v-else-if="s.kind === 'confirmClear'">
-        <h2>清空历史对局</h2>
-        <p>确定清空全部历史对局吗？当前对局会保留，此操作不可恢复。</p>
-        <div class="actions start-actions">
-          <button class="btn danger" @click="confirmClearAll">确认清空</button>
-          <button class="btn ghost" @click="closeSheet()">取消</button>
-        </div>
-      </template>
-
-      <template v-else-if="s.kind === 'confirmDelete'">
-        <h2>删除记录</h2>
-        <p>确定删除这条历史记录吗？此操作不可恢复。</p>
-        <div class="actions start-actions">
-          <button class="btn danger" @click="confirmDeleteEntry()">确认删除</button>
-          <button class="btn ghost" @click="closeSheet()">取消</button>
-        </div>
-      </template>
-
       <template v-else-if="s.kind === 'saves'">
         <h2>存档 · {{ saveCards.length }} 个</h2>
         <div class="sheet-body">
@@ -734,13 +648,25 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           </template>
           <p v-else>还没有存档——打过的对局会自动出现在这里</p>
         </div>
+        <div v-if="saveCards.length" class="hist-foot">
+          <button class="clear-btn" @click="openSheet('confirmClearSave')">清空</button>
+        </div>
       </template>
 
       <template v-else-if="s.kind === 'confirmDelSave'">
         <h2>删除存档</h2>
-        <p>确定删除这个存档吗？历史摘要会保留，此操作不可恢复。</p>
+        <p>确定删除这个存档吗？此操作不可恢复。</p>
         <div class="actions start-actions">
           <button class="btn danger" @click="deleteSaveSlot(sheet?.payload?.gid as number)">确认删除</button>
+          <button class="btn ghost" @click="closeSheet()">取消</button>
+        </div>
+      </template>
+
+      <template v-else-if="s.kind === 'confirmClearSave'">
+        <h2>清空存档</h2>
+        <p>确定清空全部存档吗？当前对局的存档会保留，此操作不可恢复。</p>
+        <div class="actions start-actions">
+          <button class="btn danger" @click="clearAllSaves">确认清空</button>
           <button class="btn ghost" @click="closeSheet()">取消</button>
         </div>
       </template>
@@ -751,7 +677,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <div class="actions start-actions">
           <button class="btn primary" @click="startNewGame()">新游戏</button>
           <button v-if="savedInfo" class="btn ghost" @click="continueSaved()">继续上局 · {{ savedInfo.hu }} 胡</button>
-          <button class="btn ghost" @click="openSheet('history')">历史记录</button>
         </div>
       </template>
     </div>

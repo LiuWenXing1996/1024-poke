@@ -3,7 +3,7 @@ import { HAND_SIZE, TARGET, freshState, placeNum, placeOp, val } from '../engine
 import { OP_TO_ENGINE, buildDeck, rankLabel } from '../engine/cards'
 import { makeRng, shuffle } from '../engine/rng'
 import type { Card, OpSymbol } from '../engine/types'
-import { S, URL_SEED, fx, saveGame, upsertHist, store } from './state'
+import { S, URL_SEED, fx, saveGame, upsertSave, store } from './state'
 import type { ActionLogEntry } from './state'
 
 // 返回：null 不可放；{ch} 可直接放；{pick:'num'|'op'} 需要选值/选符号
@@ -106,7 +106,7 @@ export function doHu() {
   if (S.hu > S.best) { S.best = S.hu; store.set('h1024.best', String(S.best)) }
   fx.burstAt++
   saveGame()
-  upsertHist()
+  upsertSave()
 }
 
 // 补牌：从牌库补满手牌（手牌已满或牌库空则不动，返回 false 供 UI 轻提示）
@@ -165,7 +165,7 @@ export function doDiscard() {
 
 let gidSeq = 0
 export function newGame(seed?: number) {
-  upsertHist(true)   // 上一局的最终流水/摘要落账（seed 0 的幽灵局自动跳过）
+  upsertSave(true)   // 上一局的最终存档落账（seed 0 的幽灵局自动跳过）
   // 局 ID：时间戳 + 序号（防同毫秒开局撞号，重来本局同 seed 也不会误覆盖历史）
   S.gid = Date.now() * 1000 + (++gidSeq % 1000)
   // 种子优先级：显式传入 > URL ?seed=（每局固定，方便测试）> 随机
@@ -184,5 +184,5 @@ export function newGame(seed?: number) {
   S.discarded = 0
   S.discardPile = []
   saveGame()
-  upsertHist()
+  upsertSave()
 }

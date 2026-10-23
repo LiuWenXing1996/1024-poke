@@ -1,6 +1,6 @@
 // 完整对局流程测试（移植自 legacy/sim/ui-test.mjs 的 10 组断言 + 自动存档）
 import { describe, expect, it } from 'vitest'
-import { S, SAVE_KEY, loadHist, loadStates, resumeGame, restoreGame, store } from '../src/game/state'
+import { S, SAVE_KEY, loadStates, resumeGame, restoreGame, store } from '../src/game/state'
 import { doDiscard, drawToFull, newGame, place, undo } from '../src/game/actions'
 import { HAND_SIZE, freshState, placeNum, placeOp, val } from '../src/engine/engine'
 import type { Card, OpSymbol } from '../src/engine/types'
@@ -78,7 +78,7 @@ describe('对局流程', () => {
   it('5. 成胡路径：8 × 8 × 4 × 4（补牌续凑，共 7 张）+ 胡牌记录 + 历史入账', () => {
     newGame()                      // 吸收 test 4 残留局
     newGame()                      // 拿到一个干净的新局（其入账在下一行被清掉）
-    store.set('h1024.hist', '[]')  // 清空历史，从头验证入账（此后不再开局，直到打完）
+    store.set('h1024.states', '{}')  // 清空存档槽，从头验证入账（此后不再开局，直到打完）
     S.hand = [mk(8), mko('×'), mk(8), mko('×'), mk(4), mko('×')]
     S.table = []
     S.st = freshState()
@@ -96,16 +96,15 @@ describe('对局流程', () => {
     expect(S.deck.length).toBe(deckBefore - 6 + 7)
     expect(S.huLog.length).toBe(1)
     expect(S.huLog[0].expr).toBe('8 × 8 × 4 × 4')
-    // 历史实时入账：当前局每步操作即 upsert 进历史，开新局时上一局已带最终数据躺在历史里
+    // 存档实时入账：开新局时上一局终态快照已落槽
     newGame(42)
-    const hist = loadHist()
-    expect(hist.length).toBe(2)          // 刚打完的胡局（实时入账）+ 当前的空局
-    expect(hist[0].hu).toBe(0)           // 当前局（新开，尚未操作）
-    expect(hist[1].hu).toBe(1)           // 上一局实时入账：1 胡
+    const states = loadStates()
+    expect(Object.keys(states).length).toBe(2)   // 打完的胡局 + 当前的空局
+    const slots = Object.values(states)
+    const done = slots.find(x => JSON.parse(x.snap).hu === 1)!
+    expect(done).toBeTruthy()                    // 上一局终态：1 胡
     newGame(42)
-    const hist2 = loadHist()
-    expect(hist2.length).toBe(3)         // 新空局也实时入账
-    expect(hist2[0].hu).toBe(0)
+    expect(Object.keys(loadStates()).length).toBe(3)   // 新空局也实时入账
   })
 
   it('6. 除法整除校验', () => {
