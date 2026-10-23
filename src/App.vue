@@ -597,7 +597,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <div class="pgrid">
           <div v-for="(c, i) in pileCells.opCells" :key="'o' + i" class="pcell" :class="{ zero: c.zero }"><b>{{ c.label }}</b><i>{{ c.n }}</i></div>
         </div>
-        <div class="actions"><button class="btn primary" @click="closeSheet()">知道了</button></div>
       </template>
 
       <template v-else-if="sheet.kind === 'huLog'">
