@@ -417,14 +417,12 @@ function removeHist(index: number) {
   histVer.value++
 }
 
-// 全部清空：两步确认（第一次点变成红色确认态，再点才清）
-const confirmClear = ref(false)
-watch(sheet, () => { confirmClear.value = false })   // 换弹层/关弹层时重置确认态
-function clearAllHist() {
-  if (!confirmClear.value) { confirmClear.value = true; return }
+// 全部清空：先弹确认框（当前对局保留）
+function clearAllHist() { openSheet('confirmClear') }
+function confirmClearAll() {
   clearHist()
   histVer.value++
-  confirmClear.value = false
+  closeSheet()
 }
 
 // 用历史记录里的种子重开一局
@@ -646,9 +644,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           <p v-else>还没有完成的对局</p>
         </div>
         <div v-if="histRows.length" class="hist-foot">
-          <button class="clear-btn" :class="{ armed: confirmClear }" @click="clearAllHist">
-            {{ confirmClear ? '确认清空？' : '清空' }}
-          </button>
+          <button class="clear-btn" @click="clearAllHist">清空</button>
+        </div>
+      </template>
+
+      <template v-else-if="sheet.kind === 'confirmClear'">
+        <h2>清空历史对局</h2>
+        <p>确定清空全部历史对局吗？当前对局会保留，此操作不可恢复。</p>
+        <div class="actions start-actions">
+          <button class="btn danger" @click="confirmClearAll">确认清空</button>
+          <button class="btn ghost" @click="closeSheet()">取消</button>
         </div>
       </template>
 

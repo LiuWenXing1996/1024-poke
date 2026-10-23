@@ -57,7 +57,7 @@ export const S = reactive<GameState>({
 })
 
 // ---- UI 轻状态：弹层 + 特效 ----
-export type SheetKind = 'help' | 'start' | 'restart' | 'pickNum' | 'pickOp' | 'pile' | 'huLog' | 'history'
+export type SheetKind = 'help' | 'start' | 'restart' | 'pickNum' | 'pickOp' | 'pile' | 'huLog' | 'history' | 'confirmClear'
 export interface SheetState { kind: SheetKind; payload?: Record<string, unknown> }
 export const sheet = ref<SheetState | null>(null)
 export const openSheet = (kind: SheetKind, payload?: Record<string, unknown>) => { sheet.value = payload ? { kind, payload } : { kind } }

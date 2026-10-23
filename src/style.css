@@ -388,10 +388,7 @@ footer .btn, footer .btn.primary, footer .btn.ghost {
   padding: 5px 16px; transition: color .15s, border-color .15s, background .15s;
 }
 .clear-btn:hover { color: var(--text); border-color: rgba(201,169,97,.6); }
-.clear-btn.armed {
-  color: #ff8f85; border-color: rgba(255,143,133,.5); background: rgba(255,143,133,.1);
-  animation: fade .2s;
-}
+.btn.danger { background: linear-gradient(180deg, #c6584a, #a1443a); color: #fff; border-color: transparent; font-weight: 600; }
 /* 开始菜单：三个入口完全同宽同高（覆盖 .sheet .actions .btn 等既有规则） */
 .start-actions { flex-direction: column; gap: 10px; }
 .start-actions .btn,
