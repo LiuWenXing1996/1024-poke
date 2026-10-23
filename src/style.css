@@ -67,10 +67,13 @@ header {
 }
 .del-btn:hover { color: #ff8f85; background: rgba(255,143,133,.12); }
 .cur-tag {
-  flex: 0 0 auto; margin-left: 8px; padding: 2px 7px;
-  border: 1px solid rgba(201,169,97,.45); border-radius: 999px;
-  background: rgba(201,169,97,.15); color: var(--gold);
-  font-size: 10px; letter-spacing: .1em; line-height: 1;
+  flex: 0 0 auto; width: 34px; padding: 2px 0; box-sizing: border-box;
+  border: 1px solid transparent; border-radius: 999px;
+  font-size: 10px; line-height: 1; text-align: center;
+  color: transparent;   /* 占位：非当前行保持序号列对齐 */
+}
+.cur-tag.on {
+  border-color: rgba(201,169,97,.45); background: rgba(201,169,97,.15); color: var(--gold);
 }
 .replay-btn {
   flex: 0 0 auto; height: 22px; padding: 0 10px; margin-left: 8px;
