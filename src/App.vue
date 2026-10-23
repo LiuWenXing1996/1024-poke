@@ -449,12 +449,6 @@ function leaveSheet() {
   else closeSheet()
 }
 
-async function copySeedLink(seed: number) {
-  const link = `${location.origin}${location.pathname}?seed=${seed}`
-  try { await navigator.clipboard.writeText(link); toast('已复制复盘链接') }
-  catch { toast(`种子 ${seed}`) }
-}
-
 // ---- 特效：toast / 胡牌 ----
 // 堆叠式：每条提示独立一行由上到下顺排，各自 1.8s 后自行消失，互不影响
 const toasts = ref<{ id: number; text: string }[]>([])
@@ -628,7 +622,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </div>
         <div class="sheet-body">
           <template v-if="histRows.length">
-            <div v-for="g in histRows" :key="g.n" class="hurow" style="cursor:pointer" @click="copySeedLink(g.seed)">
+            <div v-for="g in histRows" :key="g.n" class="hurow">
               <i>#{{ g.n }}</i><b>{{ g.hu }} 胡</b><em>{{ g.time }} · 种子 {{ g.seed }}</em>
               <span v-if="g.cur" class="cur-tag">当前</span>
               <button class="replay-btn" title="用该种子重开一局" @click.stop="replaySeed(g.seed)">重开</button>
