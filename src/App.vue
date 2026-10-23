@@ -238,6 +238,12 @@ function placeWithFly(idx: number, ch: number | OpSymbol) {
   const el = hs ? document.querySelector<HTMLElement>(`.hand .card[data-slot="${hs.s}"]`) : null
   const from = el ? el.getBoundingClientRect() : null
   const prevRects = Array.from(document.querySelectorAll<HTMLElement>('.expr .tok')).map(t => t.getBoundingClientRect())
+  // 手牌也做 FLIP：出牌后剩余手牌重排居中，瞬移会跳
+  const prevHand = new Map<string, DOMRect>()
+  document.querySelectorAll<HTMLElement>('.hand .card').forEach(c => {
+    const s = c.dataset.slot
+    if (s !== undefined) prevHand.set(s, c.getBoundingClientRect())
+  })
   place(idx, ch, { deferHu: true })
 
   if (!from) return
@@ -246,12 +252,25 @@ function placeWithFly(idx: number, ch: number | OpSymbol) {
     const tok = toks[toks.length - 1]
     if (!tok) return
     tok.style.animation = 'none'   // 入场交给飞入动画，屏蔽 CSS pop（两者同抢 transform 会抖）
-    toks.forEach((t, i) => {       // 旧 token 平滑补位
+    toks.forEach((t, i) => {       // 旧 token 平滑补位（跨度大 = 换行，时长按距离放大）
       const prev = prevRects[i]
       if (!prev) return
       const now = t.getBoundingClientRect()
       const dx = prev.left - now.left, dy = prev.top - now.top
-      if (dx || dy) t.animate(
+      if (dx || dy) {
+        const dist = Math.hypot(dx, dy)
+        t.animate(
+          [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0,0)' }],
+          { duration: Math.min(280, 110 + dist * 0.45), easing: 'ease-out' },
+        )
+      }
+    })
+    document.querySelectorAll<HTMLElement>('.hand .card').forEach(c => {   // 手牌平滑补位
+      const prev = c.dataset.slot !== undefined ? prevHand.get(c.dataset.slot) : undefined
+      if (!prev) return
+      const now = c.getBoundingClientRect()
+      const dx = prev.left - now.left, dy = prev.top - now.top
+      if (dx || dy) c.animate(
         [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0,0)' }],
         { duration: 200, easing: 'ease-out' },
       )
