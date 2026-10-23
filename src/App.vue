@@ -646,7 +646,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           </template>
           <p v-else>还没有完成的对局</p>
         </div>
-        <div class="actions"><button class="btn primary" @click="leaveSheet()">知道了</button></div>
       </template>
 
       <template v-else-if="sheet.kind === 'start'">
