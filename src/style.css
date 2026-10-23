@@ -401,6 +401,8 @@ footer .btn, footer .btn.primary, footer .btn.ghost {
 .sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .sheet h2 { margin: 0 0 4px; font-size: 18px; font-weight: 600; color: var(--gold); letter-spacing: .06em; }
 .sheet p { margin: 6px 0 0; font-size: 13px; line-height: 1.7; color: var(--text-dim); }
+.help-list { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 12px; }
+.help-list li { font-size: 13px; line-height: 1.7; color: var(--text-dim); padding-left: 4px; }
 .sheet .big { font-size: 40px; color: var(--hu); font-weight: 300; font-variant-numeric: tabular-nums; margin: 10px 0 2px; }
 .picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 14px; }
 .picker button, .picker .op {
