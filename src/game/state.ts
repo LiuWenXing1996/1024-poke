@@ -99,7 +99,15 @@ interface SaveSlot { ts: number; snap: string }
 const STATES_KEY = 'h1024.states'
 const STATES_CAP = 50
 export function loadStates(): Record<string, SaveSlot> {
-  try { return JSON.parse(store.get(STATES_KEY) || '{}') as Record<string, SaveSlot> } catch { return {} }
+  try {
+    const raw = JSON.parse(store.get(STATES_KEY) || '{}') as Record<string, SaveSlot | string>
+    const out: Record<string, SaveSlot> = {}
+    for (const [gid, v] of Object.entries(raw)) {
+      // 旧格式是纯快照字符串 → 迁移包装（ts=0 排最旧，下次落槽自然刷新）
+      out[gid] = typeof v === 'string' ? { ts: 0, snap: v } : v
+    }
+    return out
+  } catch { return {} }
 }
 function writeStates(states: Record<string, SaveSlot>) {
   // 按 ts 降序只留最近 STATES_CAP 份，防配额爆
