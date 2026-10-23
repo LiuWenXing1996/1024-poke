@@ -629,7 +629,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
               <tbody>
                 <tr v-for="g in histRows" :key="g.n">
                   <td class="gid"><span v-if="g.cur" class="cur-tag">当前</span>{{ g.gid }}</td>
-                  <td><b>{{ g.hu }} 胡</b></td>
+                  <td><b>{{ g.hu }}</b></td>
                   <td>{{ g.deck ?? '—' }}</td>
                   <td>{{ g.disc ?? '—' }}</td>
                   <td>{{ g.hand ?? '—' }}</td>
