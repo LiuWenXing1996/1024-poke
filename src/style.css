@@ -191,17 +191,8 @@ main {
   display: flex; flex-direction: column; gap: 16px; align-items: center;
   padding-top: 48px;   /* 牌库与顶栏拉开距离 */
 }
-.turn-ind {
-  margin-top: auto; padding-bottom: 2px;
-  font-size: 14px; letter-spacing: .12em; color: var(--gold); opacity: .9;
-  font-variant-numeric: tabular-nums;
-}
-.piles .end-turn {
-  flex: 0 0 auto; width: 120px; height: 50px; margin-top: 0;   /* 按钮紧随回合数沉底 */
-  font-size: 15px; padding: 0;
-}
 .piles .hu-btn {
-  flex: 0 0 auto; width: 120px; height: 50px; padding: 0;
+  flex: 0 0 auto; width: 120px; height: 50px; margin-top: auto; padding: 0;
   font-size: 18px; letter-spacing: .2em;
   animation: pop .18s ease-out;
   box-shadow: 0 8px 20px -10px #c9a961, 0 0 14px rgba(255,215,106,.4);

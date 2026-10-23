@@ -7,7 +7,7 @@ import {
   S, fx, sheet, closeSheet, openSheet, resumeGame, peekSave, loadHist, deleteHistEntry, clearHist, URL_SEED, toast,
 } from './game/state'
 import {
-  place, endTurn, undo, doDiscard, newGame, doHu,
+  place, drawToFull, undo, doDiscard, newGame, doHu,
   placementFor, unplayableReason,
 } from './game/actions'
 
@@ -101,10 +101,9 @@ watch(() => fx.drawAt, () => {
   })
 })
 
-// 结束回合：满手牌无法结束（无牌可补），轻提示原因
+// 补牌：从牌库补满手牌（满了/没牌了给轻提示）
 function onDrawClick() {
-  if (S.hand.length >= HAND_SIZE) { toast('满手牌时无法结束回合'); return }
-  endTurn()
+  if (!drawToFull()) toast(S.hand.length >= HAND_SIZE ? '手牌已满' : '牌库已空')
 }
 
 // 弃牌：手牌先逐张翻面（正面→牌背），再背面朝上飞向弃牌堆（WAAPI 关键帧，时序确定），飞完才真正执行（可撤销）
@@ -301,7 +300,7 @@ const histRows = computed(() => {
   if (sheet.value?.kind !== 'history') return []
   return loadHist().map((g, i) => {
     const d = new Date(g.ts), p2 = (n: number) => String(n).padStart(2, '0')
-    return { n: i + 1, hu: g.hu, turns: g.turns ?? 0, seed: g.seed, time: `${d.getMonth() + 1}/${d.getDate()} ${p2(d.getHours())}:${p2(d.getMinutes())}` }
+    return { n: i + 1, hu: g.hu, seed: g.seed, time: `${d.getMonth() + 1}/${d.getDate()} ${p2(d.getHours())}:${p2(d.getMinutes())}` }
   })
 })
 
@@ -422,9 +421,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <span class="pile-name">弃牌</span>
         <span class="pile-count">{{ S.discarded }}</span>
       </button>
-      <div class="turn-ind">回合 {{ S.turns + 1 }}</div>
       <button v-if="canHu" class="btn primary hu-btn" @click="onHuClick()">胡</button>
-      <button class="btn primary end-turn" @click="onDrawClick()">结束回合</button>
     </aside>
   </main>
 
@@ -455,6 +452,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   <footer>
     <button class="btn ghost" :disabled="!canUndo" @click="undo()">撤销</button>
     <button class="btn ghost" :disabled="!canDiscard || discarding" @click="onDiscardClick()">弃牌</button>
+    <button class="btn ghost" @click="onDrawClick()">补牌</button>
   </footer>
 
   <!-- 弹层 -->
@@ -464,8 +462,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <h2>怎么玩</h2>
         <p>往牌桌上依次放牌，数字和运算符必须交替。牌桌是一整个算式，按四则运算优先级求值。</p>
         <p>总值恰好等于 <b style="color:#ffd76a">1024</b> 就「胡」——桌牌洗回牌库，继续下一手。</p>
-        <p>手牌 {{ HAND_SIZE }} 张。牌一旦上桌就收不回来——但<b>本回合内</b>可以撤销（含弃牌），结束回合后就定局了。</p>
-        <p>凑不上想换血？「弃牌」弃掉当前整手牌——弃掉的牌<b>移出本局</b>，点「结束回合」自动补满（牌库会越弃越薄）。</p>
+        <p>手牌 {{ HAND_SIZE }} 张。牌一旦上桌就收不回来——但<b>胡牌之前</b>都可以撤销（含弃牌）。</p>
+        <p>凑不上想换血？「弃牌」弃掉当前整手牌——弃掉的牌<b>移出本局</b>，点「补牌」补满（牌库会越弃越薄）。</p>
         <p style="color:#8a7442">最短的一手要 7 张牌，例如 13 × 13 × 6 + 10 或 8 × 8 × 4 × 4</p>
         <div class="actions"><button class="btn primary" @click="closeSheet()">知道了</button></div>
       </template>
@@ -528,7 +526,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <div class="sheet-body">
           <template v-if="histRows.length">
             <div v-for="g in histRows" :key="g.n" class="hurow" style="cursor:pointer" @click="copySeedLink(g.seed)">
-              <i>#{{ g.n }}</i><b>{{ g.hu }} 胡 · {{ g.turns }} 回合</b><em>{{ g.time }} · 种子 {{ g.seed }}</em>
+              <i>#{{ g.n }}</i><b>{{ g.hu }} 胡</b><em>{{ g.time }} · 种子 {{ g.seed }}</em>
               <button class="replay-btn" title="用该种子重开一局" @click.stop="replaySeed(g.seed)">重开</button>
               <button class="del-btn" title="删除这条记录" @click.stop="removeHist(g.n - 1)">×</button>
             </div>

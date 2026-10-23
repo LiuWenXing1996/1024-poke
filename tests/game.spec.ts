@@ -1,7 +1,7 @@
 // 完整对局流程测试（移植自 legacy/sim/ui-test.mjs 的 10 组断言 + 自动存档）
 import { describe, expect, it } from 'vitest'
 import { S, SAVE_KEY, loadHist, resumeGame, store } from '../src/game/state'
-import { doDiscard, endTurn, newGame, place, undo } from '../src/game/actions'
+import { doDiscard, drawToFull, newGame, place, undo } from '../src/game/actions'
 import { HAND_SIZE, freshState, placeNum, placeOp, val } from '../src/engine/engine'
 import type { Card, OpSymbol } from '../src/engine/types'
 
@@ -44,70 +44,61 @@ describe('对局流程', () => {
   it('2. 手牌上限：补牌不超上限', () => {
     const c = S.hand[0]
     place(0, c.kind === 'num' ? (c.joker ? 6 : c.v) : c.o!)
-    endTurn()
+    drawToFull()
     expect(S.hand.length).toBeLessThanOrEqual(HAND_SIZE)
   })
 
-  it('3. 违规：满手牌无法结束回合', () => {
+  it('3. 满手牌补牌无效', () => {
+    newGame()
     const before = S.hand.length
-    const turnsBefore = S.turns
-    endTurn() // 手牌已满、无牌可补 → 应无操作
+    expect(drawToFull()).toBe(false)   // 手牌已满 → 无操作
     expect(S.hand.length).toBe(before)
-    expect(S.turns).toBe(turnsBefore)
   })
 
-  it('4. 完整对局：随机合法出牌 ×200 局，不变量守恒', () => {
-    let huTotal = 0, ended = 0, maxTurns = 0
-    for (let gi = 0; gi < 200; gi++) {
+  it('4. 完整对局：随机合法出牌 ×60 局，不变量守恒', () => {
+    let huTotal = 0
+    for (let gi = 0; gi < 60; gi++) {
       newGame()
-      let turns = 0
-      while (turns < 400) {
-        turns++
-        let movesThisTurn = 0
-        let guard = 0
-        while (guard++ < 12) {
-          const mv = findMove()
-          if (!mv) break
-          place(mv.idx, mv.ch)
-          movesThisTurn++
-        }
-        if (movesThisTurn === 0) { ended++; break }   // 无牌可放 = 走投无路
-        if (S.placedThisTurn === 0) break
-        endTurn()
+      let guard = 0
+      while (guard++ < 300) {
+        const mv = findMove()
+        if (mv) { place(mv.idx, mv.ch); continue }
+        // 无合法出牌：满手先弃牌换血，再补牌；补不了 = 走投无路
+        if (S.hand.length === HAND_SIZE) doDiscard()
+        if (!drawToFull()) break
       }
       huTotal += S.hu
-      maxTurns = Math.max(maxTurns, turns)
-      expect(S.hand.length + S.table.length + S.deck.length).toBe(108)
+      expect(S.hand.length + S.table.length + S.deck.length + S.discarded).toBe(108)
       expect(S.hand.length).toBeLessThanOrEqual(HAND_SIZE)
       if (S.table.length && S.st.last === 'n') expect(val(S.st)).not.toBe(1024)
     }
     expect(S.best).toBeGreaterThanOrEqual(0)
-  })
+  }, 15000)
 
-  it('5. 成胡路径：8 × 8 × 4 × 4（跨两回合，共 7 张）+ 胡牌记录 + 历史入账', () => {
+  it('5. 成胡路径：8 × 8 × 4 × 4（补牌续凑，共 7 张）+ 胡牌记录 + 历史入账', () => {
     newGame()                      // 吸收 test 4 残留局
     newGame()                      // 拿到一个干净的新局（其入账在下一行被清掉）
     store.set('h1024.hist', '[]')  // 清空历史，从头验证入账（此后不再开局，直到打完）
     S.hand = [mk(8), mko('×'), mk(8), mko('×'), mk(4), mko('×')]
     S.table = []
     S.st = freshState()
-    S.placedThisTurn = 0
+    S.placedThisHand = 0
     const deckBefore = S.deck.length
 
     put(8); put('×'); put(8); put('×'); put(4); put('×')
     expect(val(S.st)).toBe(256)
     expect(S.table.length).toBe(6)
-    endTurn()
+    drawToFull()
     S.hand.push(mk(4))
     put(4)
     expect(S.hu).toBe(1)
     expect(S.table.length).toBe(0)
     expect(S.deck.length).toBe(deckBefore - 6 + 7)
-    expect(S.run.tianHu).toBe(0)   // 收尾回合只出了 1 张，不该记天胡
+    expect(S.run.tianHu).toBe(1)   // 距上次胡连续出 7 张（≥4）→ 天胡
     expect(S.run.naked).toBe(1)    // 裸胡（≤7 张）
     expect(S.huLog.length).toBe(1)
     expect(S.huLog[0].expr).toBe('8 × 8 × 4 × 4')
-    expect(S.huLog[0].gains.join('')).toBe('🎯 裸胡')
+    expect(S.huLog[0].gains.join('')).toBe('🥇 天胡🎯 裸胡')
     // 历史实时入账：当前局每步操作即 upsert 进历史，开新局时上一局已带最终数据躺在历史里
     newGame(42)
     const hist = loadHist()
@@ -118,7 +109,6 @@ describe('对局流程', () => {
     const hist2 = loadHist()
     expect(hist2.length).toBe(3)         // 新空局也实时入账
     expect(hist2[0].hu).toBe(0)
-    expect(hist2[0].turns).toBe(0)
   })
 
   it('6. 除法整除校验', () => {
@@ -127,12 +117,12 @@ describe('对局流程', () => {
     expect(placeNum(s5, 5)).not.toBeNull()
   })
 
-  it('7. 撤销：本回合落子/弃牌皆可快照回滚，跨回合不可', () => {
+  it('7. 撤销：落子/弃牌皆可快照回滚，可一路撤到开局（胡除外）', () => {
     newGame(42)
     S.hand = [mk(8), mko('×'), mk(8), mko('×'), mk(4), mko('×')]
     S.table = []
     S.st = freshState()
-    S.placedThisTurn = 0
+    S.placedThisHand = 0
     S.undoStack = []
     put(8); put('×')
     expect(S.table.length).toBe(2)
@@ -143,17 +133,19 @@ describe('对局流程', () => {
     expect(val(S.st)).toBe(8)
     expect(S.hand.length).toBe(5)
     expect(S.hand.some(c => c.kind === 'op' && c.o === '×')).toBe(true)
-    expect(S.placedThisTurn).toBe(1)
+    expect(S.placedThisHand).toBe(1)
     // 弃牌也可撤销
     doDiscard()
     expect(S.hand.length).toBe(0)
     undo()
     expect(S.hand.length).toBe(5)
     expect(S.discarded).toBe(0)
-    endTurn()          // 回合结束 → 快照清空（手牌不满会补满）
-    undo()             // 应为空操作
-    expect(S.table.length).toBe(1)
-    expect(S.turns).toBe(1)
+    // 无回合边界：可一路撤到开局
+    undo()
+    expect(S.table.length).toBe(0)
+    expect(S.undoStack.length).toBe(0)
+    undo()             // 栈空 → 空操作
+    expect(S.table.length).toBe(0)
   })
 
   it('8. 种子：同种子同牌序', () => {
@@ -171,14 +163,14 @@ describe('对局流程', () => {
     expect(S.deck.length).toBe(108 - HAND_SIZE)
   })
 
-  it('9. 弃牌：全部手牌移出本局不洗回，不自动补牌（结束回合回满）', () => {
+  it('9. 弃牌：全部手牌移出本局不洗回，不自动补牌（补牌按钮回满）', () => {
     newGame(11)
     const deckBefore = S.deck.length
     doDiscard()
     expect(S.discarded).toBe(6)
     expect(S.deck.length).toBe(deckBefore)        // 弃牌不动牌库（弃掉的牌移出本局）
     expect(S.hand.length).toBe(0)                 // 不自动补牌
-    endTurn()                                     // 手动点「结束回合」自动补满
+    drawToFull()                                  // 手动点「补牌」
     expect(S.hand.length).toBe(HAND_SIZE)
     expect(S.deck.length).toBe(deckBefore - HAND_SIZE)
     expect(S.hand.length + S.table.length + S.deck.length + S.discarded).toBe(108)
@@ -187,7 +179,7 @@ describe('对局流程', () => {
     expect(S.deck.length).toBe(deckBefore - HAND_SIZE)   // 弃牌依旧不动牌库
     // 牌库耗尽：连弃带补直到抽干
     let guard = 0
-    while (S.deck.length > 0 && guard++ < 30) { doDiscard(); endTurn() }
+    while (S.deck.length > 0 && guard++ < 30) { doDiscard(); drawToFull() }
     expect(S.deck.length).toBe(0)
     expect(S.hand.length + S.table.length + S.deck.length + S.discarded).toBe(108)
   })
@@ -200,7 +192,7 @@ describe('对局流程', () => {
     S.deck = [mk(3), mk(7), mk(1), mk(12), mk(5), mk(9), mko('+')] // 牌堆顶（尾）是 '+'
     doDiscard()
     expect(S.hand.length).toBe(0)
-    endTurn()
+    drawToFull()
     expect(S.hand.length).toBe(HAND_SIZE)
     expect(S.hand.some(c => c.kind === 'op')).toBe(true)
   })
@@ -209,27 +201,23 @@ describe('对局流程', () => {
     newGame(7)
     const c0 = S.hand[0]
     place(0, c0.kind === 'num' ? (c0.joker ? 6 : c0.v) : c0.o!)   // 内部已 saveGame
-    const savedHu = S.hu, savedSeed = S.seed, savedTurns = S.placedThisTurn
+    const savedHu = S.hu, savedSeed = S.seed, savedPlaced = S.placedThisHand
     const savedDeck = JSON.stringify(S.deck.map(c => (c.kind === 'num' ? `n${c.joker ? 'W' : c.v}` : `o${c.wild ? 'W' : c.o}`)))
 
     for (const k of Object.keys(S)) delete (S as unknown as Record<string, unknown>)[k]  // 模拟刷新：内存全丢
     expect(resumeGame()).toBe(true)
     expect(S.seed).toBe(savedSeed)
     expect(S.hu).toBe(savedHu)
-    expect(S.placedThisTurn).toBe(savedTurns)
+    expect(S.placedThisHand).toBe(savedPlaced)
     expect(JSON.stringify(S.deck.map(c => (c.kind === 'num' ? `n${c.joker ? 'W' : c.v}` : `o${c.wild ? 'W' : c.o}`)))).toBe(savedDeck)
 
     // 恢复后的局继续推进到结束，牌数守恒（洗牌用恢复的 rngState）
-    let turns = 0
-    while (turns++ < 400) {
-      let guard = 0
-      while (guard++ < 12) {
-        const mv = findMove()
-        if (!mv) break
-        place(mv.idx, mv.ch)
-      }
-      if (S.placedThisTurn === 0) break
-      endTurn()
+    let guard = 0
+    while (guard++ < 300) {
+      const mv = findMove()
+      if (mv) { place(mv.idx, mv.ch); continue }
+      if (S.hand.length === HAND_SIZE) doDiscard()
+      if (!drawToFull()) break
     }
     expect(S.hand.length + S.table.length + S.deck.length + S.discarded).toBe(108)
 

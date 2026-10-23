@@ -4,8 +4,8 @@ import { freshState } from '../engine/engine'
 import type { Card, EngineState, HuRecord, TableToken } from '../engine/types'
 
 export interface RunStat { tianHu: number; wangZha: number; naked: number }
-export interface HistEntry { gid: number; seed: number; hu: number; turns: number; ts: number }
-export interface ActionLogEntry { turn: number; type: 'place' | 'discard' | 'endTurn' | 'hu'; text: string }
+export interface HistEntry { gid: number; seed: number; hu: number; ts: number }
+export interface ActionLogEntry { type: 'place' | 'discard' | 'draw' | 'hu'; text: string }
 
 export interface GameState {
   deck: Card[]
@@ -14,12 +14,11 @@ export interface GameState {
   st: EngineState
   hu: number
   huLog: HuRecord[]          // 本局胡牌记录：{expr, gains}（点桌角「胡」徽章回看）
-  actionLog: ActionLogEntry[] // 本局操作流水（按回合标注，随自动存档持久化；撤销随快照回滚）
+  actionLog: ActionLogEntry[] // 本局操作流水（随自动存档持久化；撤销随快照回滚）
   gid: number                // 局 ID（实时入账时用于匹配历史里「当前局」那条，防同 seed 误覆盖）
-  placedThisTurn: number
-  turns: number              // 已结束的回合数（显示回合 = turns + 1）
+  placedThisHand: number     // 距上次胡的连续出牌数（天胡判定用）
   run: RunStat
-  undoStack: string[]        // 本回合操作快照（JSON，落子/弃牌前压入；跨回合清空）
+  undoStack: string[]        // 操作快照（JSON，落子/弃牌前压入；胡牌后清空——胡不可撤销）
   discarded: number          // 本局已弃张数（弃牌移出本局，不洗回）
   discardPile: Card[]        // 弃牌堆实体（供详情查看）
   seed: number               // 局种子（历史弹层可复盘）
@@ -50,8 +49,7 @@ export const S = reactive<GameState>({
   huLog: [],
   actionLog: [],
   gid: 0,
-  placedThisTurn: 0,
-  turns: 0,
+  placedThisHand: 0,
   run: { tianHu: 0, wangZha: 0, naked: 0 },
   undoStack: [],
   discarded: 0,
@@ -74,7 +72,7 @@ export function toast(msg: string) { fx.toast = msg; fx.toastAt++ }
 // ---- 持久化 ----
 // 自动存档：整局状态落盘（rngState 可序列化，恢复后随机流从断点接上）
 // 复盘会话（URL 带 ?seed=）不落盘，避免复盘覆盖正在进行的对局
-// 历史入账走 upsertHist（在信息变化点调用：结束回合/胡牌/弃牌/新局）
+// 历史入账走 upsertHist（在信息变化点调用：胡牌/新局）
 export const SAVE_KEY = 'h1024.save'
 export function saveGame() {
   if (URL_SEED) return
@@ -105,21 +103,25 @@ export function loadHist(): HistEntry[] {
   try { return JSON.parse(store.get(HIST_KEY) || '[]') as HistEntry[] } catch { return [] }
 }
 let lastLogWriteLen = -1
-export function upsertHist() {
+let lastLogWriteAt = 0
+export function upsertHist(final = false) {
   // 首次启动的幽灵局（seed 0）不记
   if (S.seed === 0) return
   // 摘要与流水分桶：历史数组每次全量重写，塞日志会二次方膨胀；
   // 流水按局 ID 单独一桶，只写当前局（写入成本恒定），历史里随时能按 gid 查
   const hist = loadHist()
-  const entry: HistEntry = { gid: S.gid, seed: S.seed, hu: S.hu, turns: S.turns, ts: Date.now() }
+  const entry: HistEntry = { gid: S.gid, seed: S.seed, hu: S.hu, ts: Date.now() }
   if (hist[0]?.gid === S.gid) hist[0] = entry   // 当前局：原地更新（实时存档）
   else hist.unshift(entry)                      // 新局：插入一条
   writeHist(hist)
-  if (S.actionLog.length !== lastLogWriteLen) {   // 流水没变就不重写桶
+  // 流水桶：局终了（final）必写；平时 1.5s 节流 + 长度变了才写
+  const now = Date.now()
+  if (S.actionLog.length !== lastLogWriteLen && (final || now - lastLogWriteAt > 1500)) {
     const logs = loadLogs()
     logs[String(S.gid)] = S.actionLog.slice(-500)
     writeLogs(hist, logs)
     lastLogWriteLen = S.actionLog.length
+    lastLogWriteAt = now
   }
 }
 // 操作流水桶：gid -> 流水（每局上限 500 条，随历史条目清理）
@@ -128,13 +130,13 @@ function loadLogs(): Record<string, ActionLogEntry[]> {
   try { return JSON.parse(store.get(LOGS_KEY) || '{}') as Record<string, ActionLogEntry[]> } catch { return {} }
 }
 function writeLogs(hist: HistEntry[], logs: Record<string, ActionLogEntry[]>) {
-  // 只保留历史里还在的局，防流水桶无限膨胀
-  const alive = new Set(hist.map(h => String(h.gid)))
+  // 只保留历史里最近的局（≤300），防流水桶无限膨胀
   const pruned: Record<string, ActionLogEntry[]> = {}
-  for (const [gid, log] of Object.entries(logs)) if (alive.has(gid)) pruned[gid] = log
+  for (const h of hist.slice(0, 300)) if (logs[String(h.gid)]) pruned[String(h.gid)] = logs[String(h.gid)]
   try { store.set(LOGS_KEY, JSON.stringify(pruned)) } catch { /* 配额满：流水是附属数据，静默放弃 */ }
 }
 export function loadGameLog(gid: number): ActionLogEntry[] {
+  if (gid === S.gid) return S.actionLog            // 当前局：内存即最新
   return loadLogs()[String(gid)] ?? []
 }
 function writeHist(hist: HistEntry[]) {

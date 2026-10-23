@@ -33,21 +33,21 @@ export function freeSlot(): number {
   return HAND_SIZE - 1
 }
 
-// ---- 快照式撤销：本回合内落子/弃牌前压入整局快照，跨回合清空 ----
+// ---- 快照式撤销：落子/弃牌前压入整局快照；胡牌清空（胡不可撤销） ----
 const UNDO_CAP = 60
 function pushUndo() {
   S.undoStack.push(JSON.stringify({
     deck: S.deck, hand: S.hand, table: S.table, st: S.st,
-    hu: S.hu, huLog: S.huLog, placedThisTurn: S.placedThisTurn,
+    hu: S.hu, huLog: S.huLog, placedThisHand: S.placedThisHand,
     discarded: S.discarded, discardPile: S.discardPile,
     run: S.run, best: S.best, rngState: S.rngState, actionLog: S.actionLog,
   }))
   if (S.undoStack.length > UNDO_CAP) S.undoStack.shift()
 }
 
-// ---- 操作流水：每局按回合记录放牌/弃牌/结束回合（撤销随快照回滚） ----
+// ---- 操作流水：记录放牌/弃牌/补牌/胡（撤销随快照回滚） ----
 function logOp(type: ActionLogEntry['type'], text: string) {
-  S.actionLog.push({ turn: S.turns + 1, type, text })
+  S.actionLog.push({ type, text })
 }
 function cardLabel(c: Card): string {
   if (c.kind === 'op') return c.wild ? '?✦' : c.o!
@@ -78,23 +78,23 @@ export function place(cardIdx: number, ch: number | OpSymbol, opts: { deferHu?: 
   S.st = next
   S.table.push({ card, ch })
   S.hand.splice(cardIdx, 1)
-  S.placedThisTurn++
+  S.placedThisHand++
   logOp('place', `出 ${card.kind === 'op' ? String(ch) : rankLabel(ch as number)}，总值 ${val(S.st)}`)
   saveGame()
   const hu = S.st.last === 'n' && val(S.st) === TARGET
   if (hu && !opts.deferHu) doHu()     // UI 传 deferHu：先播飞牌动画，再手动 doHu 结算
   return hu
-  // 中途手牌暂时无牌可放不算死局——结束回合补牌后才有定论
+  // 中途手牌暂时无牌可放不算死局——点「补牌」换牌后才有定论
 }
 
 export function doHu() {
-  const cardsThisTurn = S.placedThisTurn
+  const cardsThisHand = S.placedThisHand
   const tableLen = S.table.length
   const jokers = S.table.filter(t => t.card.kind === 'num' && t.card.joker).length
 
   // 成就
   const gains: string[] = []
-  if (cardsThisTurn >= 4) { S.run.tianHu++; gains.push('🥇 天胡') }
+  if (cardsThisHand >= 4) { S.run.tianHu++; gains.push('🥇 天胡') }
   if (jokers === 2) { S.run.wangZha++; gains.push('👑 王炸') }
   if (tableLen <= 7) { S.run.naked++; gains.push('🎯 裸胡') }
 
@@ -105,17 +105,16 @@ export function doHu() {
     gains: gains.slice(),
   })
 
-  // 桌牌洗回牌库，回合计入本回合；自动补满手牌继续
+  // 桌牌洗回牌库
   const rng = makeRng(S.rngState)
   for (const t of S.table) S.deck.push(t.card)
   shuffle(S.deck, rng)
   S.table = []
   S.st = freshState()
   S.hu++
-  // 胡牌即本回合定局：自动进入下一回合（补牌由回合开始的自动补牌完成）
+  // 胡即定局：清撤销栈（不可撤到胡前）、重置连续出牌数，补满手牌继续
   logOp('hu', `胡 ${exprText}`)
-  S.turns++
-  S.placedThisTurn = 0
+  S.placedThisHand = 0
   S.undoStack = []
   refillHand()
   if (S.hu > S.best) { S.best = S.hu; store.set('h1024.best', String(S.best)) }
@@ -125,16 +124,14 @@ export function doHu() {
   upsertHist()
 }
 
-export function endTurn() {
-  // 满手牌无法结束回合（无牌可补）；不满即补满并进入下一回合
-  if (S.hand.length >= HAND_SIZE) return
-  logOp('endTurn', '结束回合')
+// 补牌：从牌库补满手牌（手牌已满或牌库空则不动，返回 false 供 UI 轻提示）
+export function drawToFull(): boolean {
+  if (S.hand.length >= HAND_SIZE || !S.deck.length) return false
+  const before = S.hand.length
   refillHand()
-  S.placedThisTurn = 0
-  S.turns++
-  S.undoStack = []          // 回合结束即定局，跨回合不可撤销
+  logOp('draw', `补牌 ${S.hand.length - before} 张`)
   saveGame()
-  upsertHist()
+  return true
 }
 
 // 撤销本回合上一次操作（落子/弃牌，快照式回滚；跨回合后不可用）
@@ -152,7 +149,7 @@ export function undo() {
   saveGame()
 }
 
-// 弃牌实际执行：当前手牌移出本局（不洗回）。不自动补牌，由玩家点「结束回合」手动补
+// 弃牌实际执行：当前手牌移出本局（不洗回）。不自动补牌，由玩家点「补牌」手动补
 export function doDiscard() {
   if (!S.hand.length) return
   pushUndo()
@@ -162,11 +159,11 @@ export function doDiscard() {
   S.hand = []
   logOp('discard', `弃牌：${labels}`)
   saveGame()
-  upsertHist()
 }
 
 let gidSeq = 0
 export function newGame(seed?: number) {
+  upsertHist(true)   // 上一局的最终流水/摘要落账（seed 0 的幽灵局自动跳过）
   // 局 ID：时间戳 + 序号（防同毫秒开局撞号，重来本局同 seed 也不会误覆盖历史）
   S.gid = Date.now() * 1000 + (++gidSeq % 1000)
   // 种子优先级：显式传入 > URL ?seed=（每局固定，方便测试）> 随机
@@ -180,8 +177,7 @@ export function newGame(seed?: number) {
   S.hu = 0
   S.huLog = []
   S.actionLog = []
-  S.turns = 0
-  S.placedThisTurn = 0
+  S.placedThisHand = 0
   S.undoStack = []
   S.discarded = 0
   S.discardPile = []
