@@ -13,12 +13,12 @@ export interface GameState {
   hu: number
   huLog: HuRecord[]          // 本局胡牌记录：{expr}（点桌角「胡」徽章回看）
   actionLog: ActionLogEntry[] // 本局操作流水（随自动存档持久化；撤销随快照回滚）
-  gid: number                // 局 ID（实时入账时用于匹配历史里「当前局」那条，防同 seed 误覆盖）
+  gid: number                // 局 ID（存档槽主键，防同毫秒开局撞号）
   placedThisHand: number     // 距上次胡的连续出牌数
   undoStack: string[]        // 操作快照（JSON，落子/弃牌前压入；胡牌后清空——胡不可撤销）
   discarded: number          // 本局已弃张数（弃牌移出本局，不洗回）
   discardPile: Card[]        // 弃牌堆实体（供详情查看）
-  seed: number               // 局种子（历史弹层可复盘）
+  seed: number               // 局种子（存档「重开」可复盘）
   rngState: { a: number }    // RNG 内部状态（自动存档后无缝接上随机流）
   best: number               // 历史最高胡数（localStorage 持久化）
 }

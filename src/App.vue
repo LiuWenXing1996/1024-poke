@@ -11,7 +11,7 @@ import {
   placementFor, unplayableReason,
 } from './game/actions'
 
-// 启动：复盘链接（?seed=）直接开局；否则弹开始菜单（新游戏 / 继续上局 / 历史记录）
+// 启动：复盘链接（?seed=）直接开局；否则弹开始菜单（新游戏 / 继续上局）
 if (URL_SEED) newGame()
 else openSheet('start')
 
@@ -432,7 +432,7 @@ function clearAllSaves() {
   closeSheet()
 }
 
-// 用历史记录里的种子重开一局
+// 用存档里的种子重开一局（同种子重洗，非恢复进度）
 function replaySeed(seed: number) {
   closeSheet()
   newGame(seed)
@@ -648,7 +648,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           </template>
           <p v-else>还没有存档——打过的对局会自动出现在这里</p>
         </div>
-        <div v-if="saveCards.length" class="hist-foot">
+        <div v-if="saveCards.length" class="save-foot">
           <button class="clear-btn" @click="openSheet('confirmClearSave')">清空</button>
         </div>
       </template>
