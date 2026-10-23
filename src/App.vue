@@ -624,7 +624,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           <template v-if="histRows.length">
             <table class="hist-tbl">
               <thead>
-                <tr><th>对局 ID</th><th>胡数</th><th>牌库</th><th>弃牌</th><th>手牌</th><th>牌桌</th><th>时间</th><th>种子</th><th></th></tr>
+                <tr><th>对局 ID</th><th>胡数</th><th>牌库</th><th>弃牌</th><th>手牌</th><th>牌桌</th><th>时间</th><th>种子</th><th>操作</th></tr>
               </thead>
               <tbody>
                 <tr v-for="g in histRows" :key="g.n">
