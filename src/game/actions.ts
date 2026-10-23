@@ -99,8 +99,9 @@ export function doHu() {
   if (tableLen <= 7) { S.run.naked++; gains.push('🎯 裸胡') }
 
   // 记录本胡算式（桌面马上要清空）
+  const exprText = S.table.map(t => t.card.kind === 'op' ? String(t.ch) : rankLabel(t.ch as number)).join(' ')
   S.huLog.push({
-    expr: S.table.map(t => t.card.kind === 'op' ? String(t.ch) : rankLabel(t.ch as number)).join(' '),
+    expr: exprText,
     gains: gains.slice(),
   })
 
@@ -111,6 +112,11 @@ export function doHu() {
   S.table = []
   S.st = freshState()
   S.hu++
+  // 胡牌即本回合定局：自动进入下一回合（补牌由回合开始的自动补牌完成）
+  logOp('hu', `胡 ${exprText}`)
+  S.turns++
+  S.placedThisTurn = 0
+  S.undoStack = []
   refillHand()
   if (S.hu > S.best) { S.best = S.hu; store.set('h1024.best', String(S.best)) }
   fx.burstAt++

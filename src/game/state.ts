@@ -5,7 +5,7 @@ import type { Card, EngineState, HuRecord, TableToken } from '../engine/types'
 
 export interface RunStat { tianHu: number; wangZha: number; naked: number }
 export interface HistEntry { gid: number; seed: number; hu: number; turns: number; ts: number }
-export interface ActionLogEntry { turn: number; type: 'place' | 'discard' | 'endTurn'; text: string }
+export interface ActionLogEntry { turn: number; type: 'place' | 'discard' | 'endTurn' | 'hu'; text: string }
 
 export interface GameState {
   deck: Card[]
