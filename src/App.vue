@@ -495,7 +495,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <span class="pile-name">弃牌</span>
         <span class="pile-count">{{ S.discarded }}</span>
       </button>
-      <button v-if="canHu" class="btn primary hu-btn" @click="onHuClick()">胡</button>
+      <button class="btn primary hu-btn" :disabled="!canHu" @click="onHuClick()">胡</button>
     </aside>
   </main>
 
