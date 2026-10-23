@@ -558,10 +558,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <template v-if="sheet.kind === 'help'">
         <h2>怎么玩</h2>
         <ul class="help-list">
-          <li>往牌桌上依次放牌，数字和运算符必须交替。牌桌是一整个算式，按四则运算优先级求值。</li>
-          <li>总值恰好等于 <b style="color:#ffd76a">1024</b> 就能「胡」——点右栏亮起的「胡」按钮结算，桌牌洗回牌库，点「补牌」补满手牌。</li>
-          <li>手牌 {{ HAND_SIZE }} 张。牌一旦上桌就收不回来——但<b>胡牌之前</b>都可以撤销（含弃牌）。</li>
-          <li>凑不上想换血？「弃牌」弃掉当前整手牌——弃掉的牌<b>移出本局</b>，点「补牌」补满（牌库会越弃越薄）。</li>
+          <li><b>牌桌</b>：牌桌是一整个算式，按四则运算优先级求值</li>
+          <li><b>放牌</b>：从手牌依次往牌桌上放牌，数字和运算符必须交替</li>
+          <li><b>补牌</b>：从剩余牌库中抽取适量的牌补足手牌数量至手牌上限</li>
+          <li><b>弃牌</b>：弃掉当前手牌中的所有牌，但是不可以单独弃掉某张牌</li>
+          <li><b>胡牌</b>：牌桌总值恰好等于1024就能发起胡牌，胡牌后桌面上的牌会洗回牌库</li>
+          <li><b>撤销</b>：放牌，补牌，弃牌这些操作都可以撤销，但是胡牌不可撤销</li>
         </ul>
         <div class="actions"><button class="btn primary" @click="closeSheet()">知道了</button></div>
       </template>
