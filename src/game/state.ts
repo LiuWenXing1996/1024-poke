@@ -145,6 +145,7 @@ function writeHist(hist: HistEntry[]) {
 export function deleteHistEntry(index: number) {
   const hist = loadHist()
   if (index < 0 || index >= hist.length) return
+  if (hist[index].gid === S.gid) return   // 当前对局不允许删除
   const [gone] = hist.splice(index, 1)
   writeHist(hist)
   const logs = loadLogs()
@@ -155,4 +156,6 @@ export function clearHist() {
     localStorage.removeItem(HIST_KEY)
     localStorage.removeItem(LOGS_KEY)
   } catch { /* noop */ }
+  lastLogWriteLen = -1
+  upsertHist()   // 清空也保留当前对局
 }

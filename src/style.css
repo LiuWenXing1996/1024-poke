@@ -66,6 +66,12 @@ header {
   transition: color .15s, background .15s;
 }
 .del-btn:hover { color: #ff8f85; background: rgba(255,143,133,.12); }
+.cur-tag {
+  flex: 0 0 auto; margin-left: 8px; padding: 2px 7px;
+  border: 1px solid rgba(201,169,97,.45); border-radius: 999px;
+  background: rgba(201,169,97,.15); color: var(--gold);
+  font-size: 10px; letter-spacing: .1em; line-height: 1;
+}
 .replay-btn {
   flex: 0 0 auto; height: 22px; padding: 0 10px; margin-left: 8px;
   border: 1px solid rgba(201,169,97,.35); border-radius: 999px; cursor: pointer;

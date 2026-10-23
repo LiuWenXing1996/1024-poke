@@ -375,7 +375,7 @@ const histRows = computed(() => {
   if (sheet.value?.kind !== 'history') return []
   return loadHist().map((g, i) => {
     const d = new Date(g.ts), p2 = (n: number) => String(n).padStart(2, '0')
-    return { n: i + 1, hu: g.hu, seed: g.seed, time: `${d.getMonth() + 1}/${d.getDate()} ${p2(d.getHours())}:${p2(d.getMinutes())}` }
+    return { n: i + 1, hu: g.hu, seed: g.seed, cur: g.gid === S.gid, time: `${d.getMonth() + 1}/${d.getDate()} ${p2(d.getHours())}:${p2(d.getMinutes())}` }
   })
 })
 
@@ -601,8 +601,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           <template v-if="histRows.length">
             <div v-for="g in histRows" :key="g.n" class="hurow" style="cursor:pointer" @click="copySeedLink(g.seed)">
               <i>#{{ g.n }}</i><b>{{ g.hu }} 胡</b><em>{{ g.time }} · 种子 {{ g.seed }}</em>
+              <span v-if="g.cur" class="cur-tag">当前</span>
               <button class="replay-btn" title="用该种子重开一局" @click.stop="replaySeed(g.seed)">重开</button>
-              <button class="del-btn" title="删除这条记录" @click.stop="removeHist(g.n - 1)">×</button>
+              <button v-if="!g.cur" class="del-btn" title="删除这条记录" @click.stop="removeHist(g.n - 1)">×</button>
             </div>
           </template>
           <p v-else>还没有完成的对局</p>
