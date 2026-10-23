@@ -562,7 +562,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           <li>总值恰好等于 <b style="color:#ffd76a">1024</b> 就能「胡」——点右栏亮起的「胡」按钮结算，桌牌洗回牌库，点「补牌」补满手牌。</li>
           <li>手牌 {{ HAND_SIZE }} 张。牌一旦上桌就收不回来——但<b>胡牌之前</b>都可以撤销（含弃牌）。</li>
           <li>凑不上想换血？「弃牌」弃掉当前整手牌——弃掉的牌<b>移出本局</b>，点「补牌」补满（牌库会越弃越薄）。</li>
-          <li style="color:#8a7442">最短的一手要 7 张牌，例如 13 × 13 × 6 + 10 或 8 × 8 × 4 × 4</li>
         </ul>
         <div class="actions"><button class="btn primary" @click="closeSheet()">知道了</button></div>
       </template>
