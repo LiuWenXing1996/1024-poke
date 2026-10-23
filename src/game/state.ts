@@ -66,7 +66,7 @@ export const sheet = ref<SheetState | null>(null)
 export const openSheet = (kind: SheetKind, payload?: Record<string, unknown>) => { sheet.value = payload ? { kind, payload } : { kind } }
 export const closeSheet = () => { sheet.value = null }
 
-export const fx = reactive({ toast: '', toastAt: 0, burstAt: 0, drawAt: 0, drawFrom: 'deck' as 'deck' | 'discard', returnAt: 0, returnSlots: [] as number[] })
+export const fx = reactive({ toast: '', toastAt: 0, burstAt: 0, drawAt: 0, drawFrom: 'deck' as 'deck' | 'discard', returnAt: 0, returnSlots: [] as number[], undoPlaceAt: 0, undoPlaceSlot: 0 })
 export function toast(msg: string) { fx.toast = msg; fx.toastAt++ }
 
 // ---- 持久化 ----

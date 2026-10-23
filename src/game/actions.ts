@@ -142,11 +142,19 @@ export function undo() {
   const d = JSON.parse(snap)
   const handWasEmpty = S.hand.length === 0            // 撤的是弃牌 → 牌从弃牌堆飞回
   const drawUndo = d.hand.length < S.hand.length && d.deck.length > S.deck.length  // 撤的是补牌 → 牌从手牌飞回牌库
+  const placeUndo = d.table.length < S.table.length   // 撤的是出牌 → 桌尾 token 飞回手牌
   if (drawUndo) {
     // 渲染前记下要飞走的牌的座位（watcher 在 DOM 更新前触发，能拿到旧元素做克隆飞行）
     const snapSlots = new Set(d.hand.map((c: Card) => c.slot))
     fx.returnSlots = S.hand.filter(c => !snapSlots.has(c.slot)).map(c => c.slot!)
     fx.returnAt++
+  }
+  if (placeUndo) {
+    // 回到手牌的那张牌的座位（watcher 渲染前触发，桌面旧 token 还在，可克隆飞行）
+    const curSlots = new Set(S.hand.map(c => c.slot))
+    const back = d.hand.find((c: Card) => !curSlots.has(c.slot))
+    fx.undoPlaceSlot = back?.slot ?? 0
+    fx.undoPlaceAt++
   }
   Object.assign(S, d)
   S.hand.forEach(c => { if (c.drawn) delete c.drawn })

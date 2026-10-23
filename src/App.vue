@@ -140,6 +140,41 @@ watch(() => fx.returnAt, () => {
   })
 })
 
+// 撤销出牌：桌尾 token 飞回对应手牌座位（渲染前克隆，飞行中放大成牌尺寸，真身延后现身）
+watch(() => fx.undoPlaceAt, () => {
+  const tok = document.querySelector<HTMLElement>('.expr .tok:last-child')
+  const seat = document.querySelectorAll<HTMLElement>('.hand .seat')[fx.undoPlaceSlot]
+  if (!tok || !seat) return
+  const tr = tok.getBoundingClientRect()
+  const fly = tok.cloneNode(true) as HTMLElement
+  fly.style.cssText += `position:fixed;left:${tr.left}px;top:${tr.top}px;width:${tr.width}px;height:${tr.height}px;margin:0;z-index:40;pointer-events:none;animation:none;`
+  document.body.appendChild(fly)
+  const sr = seat.getBoundingClientRect()
+  const dx = sr.left + sr.width / 2 - (tr.left + tr.width / 2)
+  const dy = sr.top + sr.height / 2 - (tr.top + tr.height / 2)
+  const scale = sr.width / tr.width
+  fly.animate(
+    [
+      { transform: 'translate(0,0) rotate(0deg) scale(1)' },
+      { transform: `translate(${dx}px, ${dy}px) rotate(-8deg) scale(${scale})` },
+    ],
+    { duration: 380, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' },
+  )
+  nextTick(() => {
+    const card = seat.querySelector<HTMLElement>('.card')
+    if (!card) { fly.remove(); return }
+    card.style.visibility = 'hidden'            // 真身藏到克隆落地
+    setTimeout(() => {
+      card.style.visibility = ''
+      card.animate(
+        [{ transform: 'scale(.9)', opacity: .5 }, { transform: 'scale(1)', opacity: 1 }],
+        { duration: 150, easing: 'ease-out' },
+      )
+      fly.remove()
+    }, 400)
+  })
+})
+
 // 补牌：从牌库补满手牌（满了/没牌了给轻提示）
 function onDrawClick() {
   if (!drawToFull()) toast(S.hand.length >= HAND_SIZE ? '手牌已满' : '牌库已空')
