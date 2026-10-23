@@ -112,11 +112,10 @@ export function doHu() {
   S.table = []
   S.st = freshState()
   S.hu++
-  // 胡即定局：清撤销栈（不可撤到胡前）、重置连续出牌数，补满手牌继续
+  // 胡即定局：清撤销栈（不可撤到胡前）、重置连续出牌数；不自动补牌，由玩家点「补牌」
   logOp('hu', `胡 ${exprText}`)
   S.placedThisHand = 0
   S.undoStack = []
-  refillHand()
   if (S.hu > S.best) { S.best = S.hu; store.set('h1024.best', String(S.best)) }
   fx.burstAt++
   if (gains.length) toast(gains.join('  '))
