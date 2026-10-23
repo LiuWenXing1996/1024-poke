@@ -157,18 +157,17 @@ function onDiscardClick() {
 }
 
 // 出牌：先记下手牌位置，落桌后让新 token 从手牌位置飞入（FLIP）
-// 若这一手成胡（deferHu 延迟结算）：牌飞入算式后，整桌逐个飞回牌库，再 doHu 爆发结算
+// 胡牌不自动结算——凑到 1024 后亮出「胡」按钮，由玩家手动触发
 function placeWithFly(idx: number, ch: number | OpSymbol) {
   const hs = handSlots.value.find(h => h.idx === idx)
   const el = hs ? document.querySelector<HTMLElement>(`.hand .card[data-slot="${hs.s}"]`) : null
   const from = el ? el.getBoundingClientRect() : null
-  const huPending = place(idx, ch, { deferHu: true })
+  place(idx, ch, { deferHu: true })
 
-  const settle = () => { if (huPending) flyTableToDeck(() => doHu()) }
-  if (!from) { settle(); return }
+  if (!from) return
   nextTick(() => {
     const tok = document.querySelector<HTMLElement>('.expr .tok:last-child')
-    if (!tok) { settle(); return }
+    if (!tok) return
     const to = tok.getBoundingClientRect()
     const dx = from.left + from.width / 2 - (to.left + to.width / 2)
     const dy = from.top + from.height / 2 - (to.top + to.height / 2)
@@ -184,7 +183,6 @@ function placeWithFly(idx: number, ch: number | OpSymbol) {
     )
     fly.finished.then(() => {
       if (expr) expr.style.overflow = ''
-      settle()
     }).catch(() => {})
   })
 }
@@ -269,6 +267,10 @@ function chooseOp(o: OpSymbol) {
 const isDev = import.meta.env.DEV
 const canUndo = computed(() => S.undoStack.length > 0)
 const canDiscard = computed(() => S.hand.length > 0)
+const canHu = computed(() => S.table.length > 0 && current.value === TARGET)
+function onHuClick() {
+  flyTableToDeck(() => doHu())
+}
 
 // ---- 弹层：牌堆详情 ----
 const pileCells = computed(() => {
@@ -380,7 +382,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <button class="icon-btn" aria-label="规则" @click="openSheet('help')">?</button>
       <button class="top-btn" @click="openSheet('restart')">重开</button>
       <button class="top-btn" title="历史对局" @click="openSheet('history')">历史</button>
-      <button v-if="isDev" class="top-btn" title="强制胡牌（仅开发模式）" @click="flyTableToDeck(() => doHu())">强胡</button>
+      <button v-if="isDev" class="top-btn" title="强制胡牌（仅开发模式）" @click="onHuClick()">强胡</button>
     </div>
   </header>
 
@@ -421,6 +423,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <span class="pile-count">{{ S.discarded }}</span>
       </button>
       <div class="turn-ind">回合 {{ S.turns + 1 }}</div>
+      <button v-if="canHu" class="btn primary hu-btn" @click="onHuClick()">胡</button>
       <button class="btn primary end-turn" @click="onDrawClick()">结束回合</button>
     </aside>
   </main>
