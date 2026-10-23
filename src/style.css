@@ -369,6 +369,7 @@ footer .btn, footer .btn.primary, footer .btn.ghost {
   box-shadow: 0 30px 60px -20px #000;
 }
 .sheet.wide { max-width: 560px; }   /* 长列表弹层：历史/胡牌记录/牌库详情 */
+.sheet.help { max-width: 640px; }   /* 帮助：六条说明更舒展 */
 .sheet.history { width: min(680px, 94vw); height: min(72vh, 600px); }   /* 历史对局：固定宽高，不随行数变化 */
 .sheet.history .sheet-body { overflow-x: auto; }   /* 列多时横向滚动兜底 */
 .sheet-head { display: flex; align-items: center; justify-content: space-between; }

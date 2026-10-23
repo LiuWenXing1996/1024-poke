@@ -554,7 +554,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
   <!-- 弹层 -->
   <div class="overlay" :class="{ show: !!sheet }" @click.self="leaveSheet()">
-    <div v-if="sheet" class="sheet" :class="{ wide: ['history', 'huLog', 'pile'].includes(sheet.kind), history: sheet.kind === 'history' }">
+    <div v-if="sheet" class="sheet" :class="{ wide: ['history', 'huLog', 'pile'].includes(sheet.kind), history: sheet.kind === 'history', help: sheet.kind === 'help' }">
       <template v-if="sheet.kind === 'help'">
         <h2>怎么玩</h2>
         <ul class="help-list">
