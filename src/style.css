@@ -382,12 +382,12 @@ footer .btn, footer .btn.primary, footer .btn.ghost {
 .hist-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; }
 .clear-btn {
-  border: 1px solid transparent; border-radius: 999px; cursor: pointer;
+  border: 1px solid rgba(201,169,97,.35); border-radius: 999px; cursor: pointer;
   background: transparent; color: rgba(232,227,214,.4);
   font-family: inherit; font-size: 12px; letter-spacing: .06em;
-  padding: 4px 12px; transition: color .15s, border-color .15s, background .15s;
+  padding: 5px 16px; transition: color .15s, border-color .15s, background .15s;
 }
-.clear-btn:hover { color: var(--text); }
+.clear-btn:hover { color: var(--text); border-color: rgba(201,169,97,.6); }
 .clear-btn.armed {
   color: #ff8f85; border-color: rgba(255,143,133,.5); background: rgba(255,143,133,.1);
   animation: fade .2s;
