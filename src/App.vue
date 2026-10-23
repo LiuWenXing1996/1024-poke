@@ -456,7 +456,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
   <!-- 弹层 -->
   <div class="overlay" :class="{ show: !!sheet }" @click.self="leaveSheet()">
-    <div v-if="sheet" class="sheet" :class="{ wide: ['history', 'huLog', 'pile'].includes(sheet.kind) }">
+    <div v-if="sheet" class="sheet" :class="{ wide: ['history', 'huLog', 'pile'].includes(sheet.kind), history: sheet.kind === 'history' }">
       <template v-if="sheet.kind === 'help'">
         <h2>怎么玩</h2>
         <p>往牌桌上依次放牌，数字和运算符必须交替。牌桌是一整个算式，按四则运算优先级求值。</p>
