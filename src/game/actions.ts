@@ -135,12 +135,20 @@ export function drawToFull(): boolean {
   return true
 }
 
-// 撤销本回合上一次操作（落子/弃牌，快照式回滚；跨回合后不可用）
+// 撤销上一次操作（出牌/弃牌/补牌皆可回滚；胡后栈已清，胡不可撤）
 export function undo() {
   const snap = S.undoStack.pop()
   if (!snap) return
-  const handWasEmpty = S.hand.length === 0   // 撤的是弃牌 → 牌从弃牌堆飞回
-  Object.assign(S, JSON.parse(snap))
+  const d = JSON.parse(snap)
+  const handWasEmpty = S.hand.length === 0            // 撤的是弃牌 → 牌从弃牌堆飞回
+  const drawUndo = d.hand.length < S.hand.length && d.deck.length > S.deck.length  // 撤的是补牌 → 牌从手牌飞回牌库
+  if (drawUndo) {
+    // 渲染前记下要飞走的牌的座位（watcher 在 DOM 更新前触发，能拿到旧元素做克隆飞行）
+    const snapSlots = new Set(d.hand.map((c: Card) => c.slot))
+    fx.returnSlots = S.hand.filter(c => !snapSlots.has(c.slot)).map(c => c.slot!)
+    fx.returnAt++
+  }
+  Object.assign(S, d)
   S.hand.forEach(c => { if (c.drawn) delete c.drawn })
   if (handWasEmpty && S.hand.length) {
     S.hand.forEach(c => { c.drawn = true })

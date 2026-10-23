@@ -101,6 +101,45 @@ watch(() => fx.drawAt, () => {
   })
 })
 
+// 撤销补牌：刚补的牌翻面后从手牌飞回牌库（渲染前克隆旧元素，fixed 层飞行不受裁剪）
+watch(() => fx.returnAt, () => {
+  const deck = document.querySelector<HTMLElement>('.pile[data-pile="deck"] .pile-stack')
+  if (!deck) return
+  const dr = deck.getBoundingClientRect()
+  fx.returnSlots.forEach((slot, i) => {
+    const el = document.querySelector<HTMLElement>(`.hand .card[data-slot="${slot}"]`)
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const fly = el.cloneNode(true) as HTMLElement
+    fly.style.cssText += `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;margin:0;z-index:40;pointer-events:none;animation:none;`
+    document.body.appendChild(fly)
+    const dx = dr.left + dr.width / 2 - (r.left + r.width / 2)
+    const dy = dr.top + dr.height / 2 - (r.top + r.height / 2)
+    const d = i * 60
+    fly.animate(
+      [{ transform: 'scaleX(1)' }, { transform: 'scaleX(.08)' }],
+      { duration: 150, delay: d, easing: 'ease-in', fill: 'forwards' },
+    )
+    setTimeout(() => fly.classList.add('dealing'), d + 150)   // 中点换牌背
+    fly.animate(
+      [{ transform: 'scaleX(.08)' }, { transform: 'scaleX(1)' }],
+      { duration: 200, delay: d + 150, easing: 'ease-out', fill: 'forwards' },
+    )
+    fly.animate(
+      [
+        { transform: 'translate(0,0) rotate(0deg) scale(1)' },
+        { transform: `translate(${dx}px, ${dy}px) rotate(10deg) scale(.5)` },
+      ],
+      { duration: 450, delay: d + 350, easing: 'cubic-bezier(.4,0,.7,.3)', fill: 'forwards' },
+    )
+    fly.animate(
+      [{ opacity: 1 }, { opacity: 0 }],
+      { duration: 180, delay: d + 620, easing: 'ease-in', fill: 'forwards' },
+    )
+    setTimeout(() => fly.remove(), d + 830)
+  })
+})
+
 // 补牌：从牌库补满手牌（满了/没牌了给轻提示）
 function onDrawClick() {
   if (!drawToFull()) toast(S.hand.length >= HAND_SIZE ? '手牌已满' : '牌库已空')
