@@ -379,7 +379,7 @@ footer .btn, footer .btn.primary, footer .btn.ghost {
 .sheet.help { max-width: 500px; }   /* 帮助：六条说明更舒展 */
 .sheet.history { width: min(680px, 94vw); height: min(72vh, 600px); }   /* 历史对局：固定宽高，不随行数变化 */
 .sheet.history .sheet-body { overflow-x: auto; }   /* 列多时横向滚动兜底 */
-.sheet.history .clear-btn { margin-right: 36px; }   /* 给右上角关闭按钮让位 */
+.hist-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; }
 .clear-btn {
   border: 1px solid transparent; border-radius: 999px; cursor: pointer;

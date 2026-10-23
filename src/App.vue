@@ -618,9 +618,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <template v-else-if="sheet.kind === 'history'">
         <div class="sheet-head">
           <h2>历史对局 · {{ histRows.length }} 局</h2>
-          <button v-if="histRows.length" class="clear-btn" :class="{ armed: confirmClear }" @click="clearAllHist">
-            {{ confirmClear ? '确认清空？' : '清空' }}
-          </button>
         </div>
         <div class="sheet-body">
           <template v-if="histRows.length">
@@ -647,6 +644,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
             </table>
           </template>
           <p v-else>还没有完成的对局</p>
+        </div>
+        <div v-if="histRows.length" class="hist-foot">
+          <button class="clear-btn" :class="{ armed: confirmClear }" @click="clearAllHist">
+            {{ confirmClear ? '确认清空？' : '清空' }}
+          </button>
         </div>
       </template>
 
