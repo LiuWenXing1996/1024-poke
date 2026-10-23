@@ -622,12 +622,23 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </div>
         <div class="sheet-body">
           <template v-if="histRows.length">
-            <div v-for="g in histRows" :key="g.n" class="hurow">
-              <span class="cur-tag" :class="{ on: g.cur }">当前</span>
-              <b>{{ g.hu }} 胡</b><em>{{ g.time }} · 种子 {{ g.seed }}</em>
-              <button class="replay-btn" title="用该种子重开一局" @click.stop="replaySeed(g.seed)">重开</button>
-              <button v-if="!g.cur" class="del-btn" title="删除这条记录" @click.stop="removeHist(g.n - 1)">×</button>
-            </div>
+            <table class="hist-tbl">
+              <thead>
+                <tr><th>当前</th><th>胡数</th><th>时间</th><th>种子</th><th></th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="g in histRows" :key="g.n">
+                  <td class="curcell"><span v-if="g.cur" class="cur-tag">当前</span></td>
+                  <td><b>{{ g.hu }} 胡</b></td>
+                  <td>{{ g.time }}</td>
+                  <td class="seed">{{ g.seed }}</td>
+                  <td class="ops">
+                    <button class="replay-btn" title="用该种子重开一局" @click="replaySeed(g.seed)">重开</button>
+                    <button v-if="!g.cur" class="del-btn" title="删除这条记录" @click="removeHist(g.n - 1)">×</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </template>
           <p v-else>还没有完成的对局</p>
         </div>
