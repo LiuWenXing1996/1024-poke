@@ -170,25 +170,25 @@ describe('对局流程', () => {
     expect(S.deck.length).toBe(108 - HAND_SIZE)
   })
 
-  it('9. 弃牌：全部手牌移出本局不洗回，不自动补牌（手动补牌回满）', () => {
+  it('9. 弃牌：全部手牌移出本局不洗回，不自动补牌（结束回合回满）', () => {
     newGame(11)
     const deckBefore = S.deck.length
     doDiscard()
     expect(S.discarded).toBe(6)
-    expect(S.deck.length).toBe(deckBefore - 6)
+    expect(S.deck.length).toBe(deckBefore)        // 弃牌不动牌库（弃掉的牌移出本局）
     expect(S.hand.length).toBe(0)                 // 不自动补牌
-    endTurn()                                     // 手动点「补牌」
+    endTurn()                                     // 手动点「结束回合」自动补满
     expect(S.hand.length).toBe(HAND_SIZE)
+    expect(S.deck.length).toBe(deckBefore - HAND_SIZE)
     expect(S.hand.length + S.table.length + S.deck.length + S.discarded).toBe(108)
     doDiscard()
     expect(S.discarded).toBe(12)
-    expect(S.deck.length).toBe(deckBefore - 12)
-    // 牌库耗尽：连弃到空，手牌不足且不再补
+    expect(S.deck.length).toBe(deckBefore - HAND_SIZE)   // 弃牌依旧不动牌库
+    // 牌库耗尽：连弃带补直到抽干
     let guard = 0
-    while (S.deck.length > 0 && guard++ < 30) doDiscard()
+    while (S.deck.length > 0 && guard++ < 30) { doDiscard(); endTurn() }
     expect(S.deck.length).toBe(0)
-    expect(S.hand.length).toBe(0)
-    expect(S.hand.length + S.table.length + S.discarded).toBe(108)
+    expect(S.hand.length + S.table.length + S.deck.length + S.discarded).toBe(108)
   })
 
   it('10. 弃牌换血：弃牌后手动补牌，救场运算符到手', () => {
