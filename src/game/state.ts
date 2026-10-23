@@ -57,7 +57,7 @@ export const S = reactive<GameState>({
 })
 
 // ---- UI 轻状态：弹层 + 特效 ----
-export type SheetKind = 'help' | 'start' | 'restart' | 'pickNum' | 'pickOp' | 'pile' | 'huLog' | 'history' | 'confirmClear' | 'confirmDelete'
+export type SheetKind = 'help' | 'start' | 'restart' | 'pickNum' | 'pickOp' | 'pile' | 'huLog' | 'history' | 'confirmClear' | 'confirmDelete' | 'saves' | 'confirmDelSave'
 export interface SheetState { kind: SheetKind; payload?: Record<string, unknown> }
 
 // 弹窗栈：每个弹窗是独立实例，叠加显示互不挤掉；后开的在上层
@@ -177,6 +177,13 @@ export function restoreGame(gid: number): boolean {
   saveGame()
   upsertHist()
   return true
+}
+// 删除单个存档（只删快照，历史摘要行保留）
+export function deleteSave(gid: number) {
+  const states = loadStates()
+  if (!states[String(gid)]) return
+  delete states[String(gid)]
+  writeStates(loadHist(), states)
 }
 function writeHist(hist: HistEntry[]) {
   // 写满会顶爆 localStorage 配额且静默失败——对半裁直到写得进

@@ -394,6 +394,21 @@ footer .btn, footer .btn.primary, footer .btn.ghost {
 }
 .clear-btn:hover { color: var(--text); border-color: rgba(201,169,97,.6); }
 .btn.danger { background: linear-gradient(180deg, #c6584a, #a1443a); color: #fff; border-color: transparent; font-weight: 600; }
+
+/* ---------- 存档卡片 ---------- */
+.save-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.save-card {
+  border: 1px solid rgba(201,169,97,.28); border-radius: 12px;
+  background: rgba(201,169,97,.06); padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.save-card.cur { border-color: rgba(201,169,97,.55); background: rgba(201,169,97,.12); }
+.save-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.save-id { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.save-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; }
+.save-meta.dim { color: var(--text-dim); font-size: 11px; }
+.save-ops { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+.save-ops .replay-btn.primary { background: linear-gradient(180deg, #d8bb78, #b99a52); color: #1d1a12; border-color: transparent; font-weight: 600; }
 /* 开始菜单：三个入口完全同宽同高（覆盖 .sheet .actions .btn 等既有规则） */
 .start-actions { flex-direction: column; gap: 10px; }
 .start-actions .btn,

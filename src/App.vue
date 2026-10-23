@@ -4,7 +4,7 @@ import { HAND_SIZE, TARGET, val } from './engine/engine'
 import { OPS, rankLabel } from './engine/cards'
 import type { Card, OpSymbol } from './engine/types'
 import {
-  S, fx, sheets, closeSheet, openSheet, resumeGame, restoreGame, peekSave, loadHist, loadStates, deleteHistEntry, clearHist, URL_SEED, toast,
+  S, fx, sheets, closeSheet, openSheet, resumeGame, restoreGame, peekSave, loadHist, loadStates, deleteHistEntry, deleteSave, clearHist, URL_SEED, toast,
 } from './game/state'
 import {
   place, drawToFull, undo, doDiscard, newGame, doHu,
@@ -421,6 +421,28 @@ function removeHist(index: number) {
   histVer.value++
 }
 
+// ---- 弹层：存档（快照槽卡片列表） ----
+const saveCards = computed(() => {
+  histVer.value
+  if (!sheets.value.some(s => s.kind === 'saves')) return []
+  const states = loadStates()
+  return loadHist()
+    .filter(g => !!states[String(g.gid)])
+    .map(g => {
+      const d = new Date(g.ts), p2 = (n: number) => String(n).padStart(2, '0')
+      return { gid: g.gid, hu: g.hu, seed: g.seed, cur: g.gid === S.gid, deck: g.deck, disc: g.discarded, hand: g.hand, tbl: g.table, time: `${d.getMonth() + 1}/${d.getDate()} ${p2(d.getHours())}:${p2(d.getMinutes())}` }
+    })
+})
+
+function openSave(gid: number) {
+  if (restoreGame(gid)) histVer.value++
+}
+function deleteSaveSlot(gid: number) {
+  deleteSave(gid)
+  histVer.value++
+  closeSheet()   // 只关确认层
+}
+
 // 单条删除：确认框浮在历史弹窗上，确认后只关确认层
 function confirmDeleteEntry() {
   const idx = sheet.value?.payload?.index as number
@@ -492,6 +514,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <button class="icon-btn" aria-label="规则" @click="openSheet('help')">?</button>
       <button class="top-btn" @click="openSheet('restart')">重开</button>
       <button class="top-btn" title="历史对局" @click="openSheet('history')">历史</button>
+      <button class="top-btn" title="存档：可恢复继续玩的牌局" @click="openSheet('saves')">存档</button>
       <button v-if="isDev" class="top-btn" title="强制胡牌（仅开发模式）" @click="onHuClick()">强胡</button>
     </div>
   </header>
@@ -568,7 +591,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   <!-- 弹层栈：每层独立实例，后开的叠在上层 -->
   <div class="overlay" :class="{ show: sheets.length > 0 }">
     <div v-for="(s, li) in sheets" :key="li" class="sheet-layer" @click.self="closeLayer(li)">
-    <div class="sheet" :class="{ wide: ['history', 'huLog', 'pile'].includes(s.kind), history: s.kind === 'history', help: s.kind === 'help' }">
+    <div class="sheet" :class="{ wide: ['history', 'huLog', 'pile', 'saves'].includes(s.kind), history: s.kind === 'history', help: s.kind === 'help' }">
       <button v-if="s.kind !== 'start'" class="sheet-close" title="关闭" @click="closeLayer(li)">×</button>
       <template v-if="s.kind === 'help'">
         <h2>怎么玩</h2>
@@ -679,6 +702,45 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <p>确定删除这条历史记录吗？此操作不可恢复。</p>
         <div class="actions start-actions">
           <button class="btn danger" @click="confirmDeleteEntry()">确认删除</button>
+          <button class="btn ghost" @click="closeSheet()">取消</button>
+        </div>
+      </template>
+
+      <template v-else-if="s.kind === 'saves'">
+        <h2>存档 · {{ saveCards.length }} 个</h2>
+        <div class="sheet-body">
+          <template v-if="saveCards.length">
+            <div class="save-grid">
+              <div v-for="c in saveCards" :key="c.gid" class="save-card" :class="{ cur: c.cur }">
+                <div class="save-head">
+                  <b class="save-id">{{ c.gid }}</b>
+                  <span v-if="c.cur" class="cur-tag">当前</span>
+                </div>
+                <div class="save-meta">
+                  <span>胡 {{ c.hu }}</span>
+                  <span>牌库 {{ c.deck }}</span>
+                  <span>弃牌 {{ c.disc }}</span>
+                  <span>手牌 {{ c.hand }}</span>
+                  <span>牌桌 {{ c.tbl }}</span>
+                </div>
+                <div class="save-meta dim">最近游玩 {{ c.time }} · 种子 {{ c.seed }}</div>
+                <div class="save-ops">
+                  <button v-if="!c.cur" class="replay-btn primary" @click="openSave(c.gid)">打开</button>
+                  <button class="replay-btn" @click="replaySeed(c.seed)">重开</button>
+                  <button v-if="!c.cur" class="del-btn" title="删除存档" @click="openSheet('confirmDelSave', { gid: c.gid })">×</button>
+                </div>
+              </div>
+            </div>
+          </template>
+          <p v-else>还没有存档——打过的对局会自动出现在这里</p>
+        </div>
+      </template>
+
+      <template v-else-if="s.kind === 'confirmDelSave'">
+        <h2>删除存档</h2>
+        <p>确定删除这个存档吗？历史摘要会保留，此操作不可恢复。</p>
+        <div class="actions start-actions">
+          <button class="btn danger" @click="deleteSaveSlot(sheet?.payload?.gid as number)">确认删除</button>
           <button class="btn ghost" @click="closeSheet()">取消</button>
         </div>
       </template>
