@@ -466,10 +466,6 @@ watch(() => fx.toastAt, () => {
 })
 
 const exprEl = ref<HTMLElement | null>(null)
-watch(() => S.table.length, async () => {
-  await nextTick()
-  if (exprEl.value) exprEl.value.scrollTop = exprEl.value.scrollHeight
-})
 
 // ---- 快捷键 ----
 function onKey(e: KeyboardEvent) {
