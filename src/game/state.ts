@@ -3,7 +3,7 @@ import { reactive, ref } from 'vue'
 import { freshState } from '../engine/engine'
 import type { Card, EngineState, HuRecord, TableToken } from '../engine/types'
 
-export interface HistEntry { gid: number; seed: number; hu: number; ts: number }
+export interface HistEntry { gid: number; seed: number; hu: number; deck: number; discarded: number; ts: number }
 export interface ActionLogEntry { type: 'place' | 'discard' | 'draw' | 'hu'; text: string }
 
 export interface GameState {
@@ -107,7 +107,7 @@ export function upsertHist(final = false) {
   // 摘要与流水分桶：历史数组每次全量重写，塞日志会二次方膨胀；
   // 流水按局 ID 单独一桶，只写当前局（写入成本恒定），历史里随时能按 gid 查
   const hist = loadHist()
-  const entry: HistEntry = { gid: S.gid, seed: S.seed, hu: S.hu, ts: Date.now() }
+  const entry: HistEntry = { gid: S.gid, seed: S.seed, hu: S.hu, deck: S.deck.length, discarded: S.discarded, ts: Date.now() }
   if (hist[0]?.gid === S.gid) hist[0] = entry   // 当前局：原地更新（实时存档）
   else hist.unshift(entry)                      // 新局：插入一条
   writeHist(hist)
