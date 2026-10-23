@@ -624,7 +624,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           <template v-if="histRows.length">
             <div v-for="g in histRows" :key="g.n" class="hurow">
               <span class="cur-tag" :class="{ on: g.cur }">当前</span>
-              <i>#{{ g.n }}</i><b>{{ g.hu }} 胡</b><em>{{ g.time }} · 种子 {{ g.seed }}</em>
+              <b>{{ g.hu }} 胡</b><em>{{ g.time }} · 种子 {{ g.seed }}</em>
               <button class="replay-btn" title="用该种子重开一局" @click.stop="replaySeed(g.seed)">重开</button>
               <button v-if="!g.cur" class="del-btn" title="删除这条记录" @click.stop="removeHist(g.n - 1)">×</button>
             </div>
