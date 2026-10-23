@@ -73,11 +73,11 @@ header {
   border-bottom: 1px solid rgba(201,169,97,.3);
   font-weight: 500; font-size: 10px; letter-spacing: .15em; color: var(--gold-dim);
 }
-.hist-tbl td { padding: 9px 8px; border-bottom: 1px solid rgba(232,227,214,.08); font-size: 13px; }
+.hist-tbl td { padding: 9px 8px; border-bottom: 1px solid rgba(232,227,214,.08); font-size: 13px; white-space: nowrap; }
 .hist-tbl tbody tr:last-child td { border-bottom: none; }
-.hist-tbl td b { font-weight: 600; font-size: 15px; letter-spacing: .04em; }
+.hist-tbl td b { font-weight: 600; }
 .hist-tbl td.seed { color: var(--text-dim); }
-.hist-tbl td.gid { color: var(--text-dim); font-size: 11px; white-space: nowrap; }
+.hist-tbl td.gid { color: var(--text-dim); white-space: nowrap; }
 .hist-tbl td.gid .cur-tag { margin-right: 6px; }
 .hist-tbl td.ops { text-align: right; white-space: nowrap; }
 .cur-tag {
