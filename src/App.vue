@@ -27,14 +27,15 @@ const tokens = computed(() => {
   })
   return S.table.map((t, i) => {
     const isOp = t.card.kind === 'op'
-    const joker = !isOp && !!t.card.joker
+    const joker = t.card.kind === 'num' && !!t.card.joker
+    const wildOp = t.card.kind === 'op' && !!t.card.wild
     const red = t.card.suit === '♥' || t.card.suit === '♦'
     return {
       // 万能牌（王/任意运算）也显示成实际打出的牌面，仅以虚线框+✦角标标记
       label: isOp ? String(t.ch) : rankLabel(t.ch as number),
       suit: t.card.suit ?? '',
       isOp,
-      isWild: isOp ? !!t.card.wild : joker,
+      isWild: wildOp || joker,
       red,
       termLast: i >= termStart,
     }
@@ -269,12 +270,6 @@ const isDev = import.meta.env.DEV
 const canUndo = computed(() => S.undoStack.length > 0)
 const canDiscard = computed(() => S.hand.length > 0)
 
-function requestRestart() {
-  if (S.deck.length === 0) { openSheet('start'); return }   // 没开局：回开始菜单
-  if (S.hu > 0) openSheet('restart')
-  else newGame()
-}
-
 // ---- 弹层：牌堆详情 ----
 const pileCells = computed(() => {
   const p = sheet.value
@@ -383,7 +378,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
     <div class="brand">胡<b>1024</b></div>
     <div class="top-actions">
       <button class="icon-btn" aria-label="规则" @click="openSheet('help')">?</button>
-      <button class="top-btn" @click="requestRestart()">重开</button>
+      <button class="top-btn" @click="openSheet('restart')">重开</button>
       <button class="top-btn" title="历史对局" @click="openSheet('history')">历史</button>
       <button v-if="isDev" class="top-btn" title="强制胡牌（仅开发模式）" @click="flyTableToDeck(() => doHu())">强胡</button>
     </div>
@@ -473,11 +468,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       </template>
 
       <template v-else-if="sheet.kind === 'restart'">
-        <h2>重开本局</h2>
-        <p>当前 {{ S.hu }} 胡会作废（不覆盖最高纪录）。</p>
-        <div class="actions">
-          <button class="btn ghost" @click="closeSheet()">继续玩</button>
-          <button class="btn primary" @click="closeSheet(); newGame()">重开</button>
+        <h2>重开</h2>
+        <div class="actions start-actions">
+          <button class="btn primary" :disabled="!S.deck.length" @click="closeSheet(); newGame(S.seed)">重来本局</button>
+          <button class="btn ghost" @click="closeSheet(); newGame()">新开一局</button>
         </div>
       </template>
 
