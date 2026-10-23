@@ -4,7 +4,7 @@ import { HAND_SIZE, TARGET, val } from './engine/engine'
 import { OPS, rankLabel } from './engine/cards'
 import type { Card, OpSymbol } from './engine/types'
 import {
-  S, fx, sheets, closeSheet, openSheet, resumeGame, peekSave, loadHist, deleteHistEntry, clearHist, URL_SEED, toast,
+  S, fx, sheets, closeSheet, openSheet, resumeGame, restoreGame, peekSave, loadHist, loadStates, deleteHistEntry, clearHist, URL_SEED, toast,
 } from './game/state'
 import {
   place, drawToFull, undo, doDiscard, newGame, doHu,
@@ -409,9 +409,10 @@ const histVer = ref(0)
 const histRows = computed(() => {
   histVer.value
   if (!sheets.value.some(s => s.kind === 'history')) return []
+  const states = loadStates()
   return loadHist().map((g, i) => {
     const d = new Date(g.ts), p2 = (n: number) => String(n).padStart(2, '0')
-    return { n: i + 1, gid: g.gid, hu: g.hu, seed: g.seed, cur: g.gid === S.gid, deck: g.gid === S.gid ? S.deck.length : g.deck, disc: g.gid === S.gid ? S.discarded : g.discarded, hand: g.gid === S.gid ? S.hand.length : g.hand, tbl: g.gid === S.gid ? S.table.length : g.table, time: `${d.getMonth() + 1}/${d.getDate()} ${p2(d.getHours())}:${p2(d.getMinutes())}` }
+    return { n: i + 1, gid: g.gid, hu: g.hu, seed: g.seed, cur: g.gid === S.gid, resume: g.gid !== S.gid && !!states[String(g.gid)], deck: g.gid === S.gid ? S.deck.length : g.deck, disc: g.gid === S.gid ? S.discarded : g.discarded, hand: g.gid === S.gid ? S.hand.length : g.hand, tbl: g.gid === S.gid ? S.table.length : g.table, time: `${d.getMonth() + 1}/${d.getDate()} ${p2(d.getHours())}:${p2(d.getMinutes())}` }
   })
 })
 
@@ -425,6 +426,11 @@ function confirmDeleteEntry() {
   const idx = sheet.value?.payload?.index as number
   removeHist(idx)
   closeSheet()
+}
+
+// 恢复历史对局继续玩（当前局进度先入快照槽，随时可切回来）
+function resumeHist(gid: number) {
+  if (restoreGame(gid)) histVer.value++
 }
 
 // 全部清空：先弹确认框（当前对局保留）
@@ -644,6 +650,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                   <td>{{ g.time }}</td>
                   <td class="seed">{{ g.seed }}</td>
                   <td class="ops">
+                    <button v-if="g.resume" class="replay-btn" title="恢复这局继续玩（当前局进度会先存档）" @click="resumeHist(g.gid)">继续</button>
                     <button class="replay-btn" title="用该种子重开一局" @click="replaySeed(g.seed)">重开</button>
                     <button v-if="!g.cur" class="del-btn" title="删除这条记录" @click="openSheet('confirmDelete', { index: g.n - 1 })">×</button>
                   </td>

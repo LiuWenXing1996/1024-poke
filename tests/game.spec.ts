@@ -1,6 +1,6 @@
 // 完整对局流程测试（移植自 legacy/sim/ui-test.mjs 的 10 组断言 + 自动存档）
 import { describe, expect, it } from 'vitest'
-import { S, SAVE_KEY, loadHist, resumeGame, store } from '../src/game/state'
+import { S, SAVE_KEY, loadHist, loadStates, resumeGame, restoreGame, store } from '../src/game/state'
 import { doDiscard, drawToFull, newGame, place, undo } from '../src/game/actions'
 import { HAND_SIZE, freshState, placeNum, placeOp, val } from '../src/engine/engine'
 import type { Card, OpSymbol } from '../src/engine/types'
@@ -227,5 +227,35 @@ describe('对局流程', () => {
     // 无存档 → 恢复失败
     store.set(SAVE_KEY, '')
     expect(resumeGame()).toBe(false)
+  })
+
+  it('12. 历史继续：快照恢复旧局，流水回灌，双向往返', () => {
+    newGame(42)
+    const gid1 = S.gid
+    S.hand = [mk(8), mko('×'), mk(3), mk(5), mk(9), mk(12)]
+    S.table = []
+    S.st = freshState()
+    S.placedThisHand = 0
+    put(8); put('×')                       // 桌面 8 ×（无自动胡）
+    expect(val(S.st)).toBe(8)
+    const logLen1 = S.actionLog.length
+
+    newGame(77)                            // 开新局：旧局终态快照入桶
+    const gid2 = S.gid
+    expect(S.gid).not.toBe(gid1)
+    expect(loadStates()[String(gid1)]).toBeTruthy()
+
+    expect(restoreGame(gid1)).toBe(true)   // 恢复旧局
+    expect(S.gid).toBe(gid1)
+    expect(S.seed).toBe(42)
+    expect(S.table.length).toBe(2)
+    expect(val(S.st)).toBe(8)
+    expect(S.actionLog.length).toBe(logLen1)   // 流水从桶回灌
+    expect(S.hand.length + S.table.length + S.deck.length + S.discarded).toBe(108)
+
+    expect(restoreGame(gid2)).toBe(true)   // 再切回新局（旧局进度已快照）
+    expect(S.gid).toBe(gid2)
+    expect(S.seed).toBe(77)
+    expect(restoreGame(gid2)).toBe(false)  // 已是当前局 → 拒绝
   })
 })

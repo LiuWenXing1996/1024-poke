@@ -110,9 +110,14 @@ export function upsertHist(final = false) {
   // 流水按局 ID 单独一桶，只写当前局（写入成本恒定），历史里随时能按 gid 查
   const hist = loadHist()
   const entry: HistEntry = { gid: S.gid, seed: S.seed, hu: S.hu, deck: S.deck.length, discarded: S.discarded, hand: S.hand.length, table: S.table.length, ts: Date.now() }
-  if (hist[0]?.gid === S.gid) hist[0] = entry   // 当前局：原地更新（实时存档）
-  else hist.unshift(entry)                      // 新局：插入一条
+  const at = hist.findIndex(h => h.gid === S.gid)
+  if (at >= 0) { hist.splice(at, 1); hist.unshift(entry) }   // 已有（当前局实时更新 / 恢复的旧局）：挪到顶部
+  else hist.unshift(entry)                                   // 新局：插入一条
   writeHist(hist)
+  // 状态快照：供历史「继续」恢复（不含撤销栈与流水，流水在桶里可回灌）
+  const states = loadStates()
+  states[String(S.gid)] = gameSnapshot()
+  writeStates(hist, states)
   // 流水桶：局终了（final）必写；平时 1.5s 节流 + 长度变了才写
   const now = Date.now()
   if (S.actionLog.length !== lastLogWriteLen && (final || now - lastLogWriteAt > 1500)) {
@@ -137,6 +142,41 @@ function writeLogs(hist: HistEntry[], logs: Record<string, ActionLogEntry[]>) {
 export function loadGameLog(gid: number): ActionLogEntry[] {
   if (gid === S.gid) return S.actionLog            // 当前局：内存即最新
   return loadLogs()[String(gid)] ?? []
+}
+
+// 各局状态快照：供历史「继续」恢复（不含撤销栈；流水从桶回灌）。只留最近 50 局防配额爆
+const STATES_KEY = 'h1024.states'
+const STATES_CAP = 50
+export function loadStates(): Record<string, string> {
+  try { return JSON.parse(store.get(STATES_KEY) || '{}') as Record<string, string> } catch { return {} }
+}
+function writeStates(hist: HistEntry[], states: Record<string, string>) {
+  const pruned: Record<string, string> = {}
+  for (const h of hist.slice(0, STATES_CAP)) if (states[String(h.gid)]) pruned[String(h.gid)] = states[String(h.gid)]
+  try { store.set(STATES_KEY, JSON.stringify(pruned)) } catch { /* 配额满：快照是附属数据，静默放弃 */ }
+}
+function gameSnapshot(): string {
+  const snap = JSON.parse(JSON.stringify(S)) as Record<string, unknown>
+  delete snap.undoStack   // 撤销栈不随快照（恢复后从零可撤）
+  delete snap.actionLog   // 流水从流水桶回灌，不重复存
+  return JSON.stringify(snap)
+}
+// 恢复历史对局：先把当前局存进快照槽（进度不丢、流水入桶），再换入目标局；成功返回 true
+export function restoreGame(gid: number): boolean {
+  if (gid === S.gid) return false
+  const states = loadStates()
+  const snap = states[String(gid)]
+  if (!snap) return false
+  const hist = loadHist()
+  const logs = loadLogs()
+  logs[String(S.gid)] = S.actionLog.slice(-500)   // 当前局流水落桶
+  writeLogs(hist, logs)
+  states[String(S.gid)] = gameSnapshot()          // 当前局快照落槽
+  Object.assign(S, JSON.parse(snap), { undoStack: [], actionLog: logs[String(gid)] ?? [] })
+  lastLogWriteLen = -1
+  saveGame()
+  upsertHist()
+  return true
 }
 function writeHist(hist: HistEntry[]) {
   // 写满会顶爆 localStorage 配额且静默失败——对半裁直到写得进
