@@ -420,6 +420,13 @@ function removeHist(index: number) {
   histVer.value++
 }
 
+// 单条删除：确认框浮在历史弹窗上，确认后只关确认层
+function confirmDeleteEntry() {
+  const idx = sheet.value?.payload?.index as number
+  removeHist(idx)
+  closeSheet()
+}
+
 // 全部清空：先弹确认框（当前对局保留）
 function clearAllHist() { openSheet('confirmClear') }
 function confirmClearAll() {
@@ -638,7 +645,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                   <td class="seed">{{ g.seed }}</td>
                   <td class="ops">
                     <button class="replay-btn" title="用该种子重开一局" @click="replaySeed(g.seed)">重开</button>
-                    <button v-if="!g.cur" class="del-btn" title="删除这条记录" @click="removeHist(g.n - 1)">×</button>
+                    <button v-if="!g.cur" class="del-btn" title="删除这条记录" @click="openSheet('confirmDelete', { index: g.n - 1 })">×</button>
                   </td>
                 </tr>
               </tbody>
@@ -656,6 +663,15 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <p>确定清空全部历史对局吗？当前对局会保留，此操作不可恢复。</p>
         <div class="actions start-actions">
           <button class="btn danger" @click="confirmClearAll">确认清空</button>
+          <button class="btn ghost" @click="closeSheet()">取消</button>
+        </div>
+      </template>
+
+      <template v-else-if="s.kind === 'confirmDelete'">
+        <h2>删除记录</h2>
+        <p>确定删除这条历史记录吗？此操作不可恢复。</p>
+        <div class="actions start-actions">
+          <button class="btn danger" @click="confirmDeleteEntry()">确认删除</button>
           <button class="btn ghost" @click="closeSheet()">取消</button>
         </div>
       </template>

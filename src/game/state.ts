@@ -57,7 +57,7 @@ export const S = reactive<GameState>({
 })
 
 // ---- UI 轻状态：弹层 + 特效 ----
-export type SheetKind = 'help' | 'start' | 'restart' | 'pickNum' | 'pickOp' | 'pile' | 'huLog' | 'history' | 'confirmClear'
+export type SheetKind = 'help' | 'start' | 'restart' | 'pickNum' | 'pickOp' | 'pile' | 'huLog' | 'history' | 'confirmClear' | 'confirmDelete'
 export interface SheetState { kind: SheetKind; payload?: Record<string, unknown> }
 
 // 弹窗栈：每个弹窗是独立实例，叠加显示互不挤掉；后开的在上层
