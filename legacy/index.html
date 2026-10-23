@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta http-equiv="cache-control" content="no-store" />
+<title>胡 1024</title>
+<style>
+  :root {
+    --felt-1: #0a2620;
+    --felt-2: #123f33;
+    --felt-3: #0b2d25;
+    --gold: #c9a961;
+    --gold-dim: #8a7442;
+    --ivory: #f6f1e4;
+    --ink: #1b1a17;
+    --red: #b8352c;
+    --op-bg: #253352;
+    --op-ink: #dfe7f5;
+    --text: #e8e3d6;
+    --text-dim: #9aa79f;
+    --hu: #ffd76a;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #06110e;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    overscroll-behavior: none;
+    overflow: hidden;
+  }
+  body {
+    display: flex; flex-direction: column;
+    height: 100dvh;
+    background:
+      radial-gradient(120% 80% at 50% 0%, #144536 0%, #0a2620 45%, #06110e 100%);
+  }
+
+  /* ---------- 顶栏 ---------- */
+  header {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 18px 8px;
+  }
+  .brand {
+    font-size: 15px; letter-spacing: .18em; color: var(--gold);
+    font-weight: 600; font-variant-numeric: tabular-nums;
+  }
+  .brand b { font-size: 22px; letter-spacing: .04em; margin-left: 6px; }
+  .scores { margin-left: auto; display: flex; gap: 18px; align-items: baseline; }
+  .score { text-align: right; }
+  .score .k { font-size: 10px; color: var(--text-dim); letter-spacing: .22em; display: block; }
+  .score .v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .score.hu .v { color: var(--hu); }
+  .score.hu { cursor: pointer; }
+  .score#bestScore { cursor: pointer; }
+  .hurow { display: flex; align-items: baseline; gap: 10px; padding: 7px 2px; border-bottom: 1px solid rgba(232,227,214,.08); }
+  .hurow i { font-style: normal; font-size: 11px; color: var(--text-dim); min-width: 22px; }
+  .hurow b { font-weight: 600; font-size: 15px; letter-spacing: .04em; }
+  .hurow em { font-style: normal; font-size: 11px; color: var(--gold); margin-left: auto; white-space: nowrap; }
+  .icon-btn {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 1px solid rgba(201,169,97,.4); background: transparent; color: var(--gold);
+    font-size: 14px; cursor: pointer; line-height: 1;
+  }
+  .icon-btn:active { background: rgba(201,169,97,.15); }
+
+  /* ---------- 牌桌 ---------- */
+  main {
+    flex: 1 1 auto; min-height: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 8px 14px;
+    position: relative;
+  }
+  .felt {
+    width: 100%; max-width: 760px;
+    flex: 1 1 auto; min-height: 0;
+    border-radius: 22px;
+    border: 1px solid rgba(201,169,97,.22);
+    background:
+      radial-gradient(90% 120% at 50% 0%, var(--felt-2) 0%, var(--felt-1) 60%, var(--felt-3) 100%);
+    box-shadow: inset 0 0 60px rgba(0,0,0,.45), 0 18px 40px -20px #000;
+    display: flex; flex-direction: column;
+    padding: 18px 16px 16px;
+    overflow: hidden;
+  }
+  .value {
+    flex: 0 0 auto; text-align: center;
+    font-size: clamp(38px, 11vw, 64px); font-weight: 300;
+    font-variant-numeric: tabular-nums; letter-spacing: .02em;
+    color: var(--text);
+    text-shadow: 0 0 24px rgba(201,169,97,.16);
+    transition: color .25s, transform .18s;
+  }
+  .value.near { color: #ffe6a3; }
+  .value.hit { color: var(--hu); transform: scale(1.06); }
+  .value .target {
+    display: block; font-size: 11px; letter-spacing: .3em;
+    color: var(--gold-dim); margin-top: 2px; font-weight: 500;
+  }
+  .expr {
+    flex: 1 1 auto; min-height: 0;
+    display: flex; flex-wrap: wrap; align-content: flex-start;
+    gap: 5px; padding: 12px 2px;
+    overflow-y: auto;
+    font-variant-numeric: tabular-nums;
+  }
+  .expr .empty { color: rgba(232,227,214,.22); font-size: 13px; letter-spacing: .1em; margin: auto; }
+  .tok {
+    min-width: 30px; height: 34px; padding: 0 7px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 7px; font-size: 17px; font-weight: 600;
+    position: relative;
+    animation: pop .18s ease-out;
+  }
+  .tok.n { background: var(--ivory); color: var(--ink); box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+  .tok.o { background: var(--op-bg); color: var(--op-ink); border: 1px solid rgba(223,231,245,.16); font-weight: 500; }
+  .tok.term-last { box-shadow: 0 0 0 1.5px rgba(255,215,106,.55), 0 2px 6px rgba(0,0,0,.3); }
+  .tok.wild {
+    background: linear-gradient(160deg, #4a3c1c, #30270f);
+    color: var(--hu);
+    border: 1px solid rgba(255,215,106,.65);
+  }
+  .tok.wild::after {
+    content: ""; position: absolute; inset: 0; border-radius: 7px;
+    border: 1px dashed rgba(255,215,106,.75); pointer-events: none;
+  }
+  .tok .star {
+    position: absolute; top: -3px; right: -2px;
+    font-size: 9px; font-style: normal; color: var(--hu);
+    text-shadow: 0 0 6px rgba(255,215,106,.8);
+  }
+  .deck-row {
+    flex: 0 0 auto;
+    display: flex; justify-content: flex-end; align-items: center; gap: 8px;
+    padding-top: 6px;
+  }
+  .deck-badge {
+    font-size: 10px; letter-spacing: .12em;
+    padding: 3px 9px; border-radius: 999px;
+    color: rgba(232,227,214,.55);
+    border: 1px solid rgba(232,227,214,.18);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .deck-badge:first-child { color: rgba(201,169,97,.85); border-color: rgba(201,169,97,.3); }
+  .deck-badge.clickable { cursor: pointer; }
+  .deckinfo {
+    font-size: 10px; letter-spacing: .18em; color: rgba(232,227,214,.32);
+  }
+  .deckinfo.copyable { cursor: pointer; user-select: none; }
+  .deckinfo.copyable:hover { color: rgba(232,227,214,.6); }
+  .deck-badge.clickable { cursor: pointer; }
+  .deck-badge.clickable:hover { color: rgba(232,227,214,.85); border-color: rgba(232,227,214,.4); }
+  .pgrid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
+    margin-top: 12px;
+  }
+  .pcell {
+    text-align: center; padding: 6px 2px; border-radius: 8px;
+    background: rgba(255,255,255,.04); border: 1px solid rgba(201,169,97,.18);
+  }
+  .pcell b { display: block; font-size: 14px; color: var(--text); font-weight: 600; }
+  .pcell i { display: block; font-style: normal; font-size: 11px; color: var(--gold); margin-top: 2px; }
+  .pcell.zero { opacity: .28; }
+  @keyframes pop { from { transform: translateY(-8px) scale(.9); opacity: 0; } }
+
+  /* ---------- 手牌 ---------- */
+  .stuckbar {
+    display: none; margin: 0 auto 8px; width: fit-content;
+    padding: 7px 16px; border-radius: 999px;
+    border: 1px solid rgba(201,169,97,.45); background: rgba(201,169,97,.1);
+    color: var(--gold); font-size: 12px; letter-spacing: .06em;
+  }
+  .stuckbar.show { display: block; animation: fade .25s; }
+  .hand-wrap { flex: 0 0 auto; padding: 4px 14px 10px; }
+  .hand-top { display: flex; justify-content: flex-end; padding: 0 2px 6px; }
+  .mini-btn {
+    font-family: inherit; font-size: 12px; letter-spacing: .08em;
+    padding: 5px 14px; border-radius: 999px; cursor: pointer;
+    border: 1px solid rgba(232,227,214,.22); background: transparent; color: var(--text-dim);
+    transition: color .15s, border-color .15s;
+  }
+  .mini-btn:hover { color: var(--text); border-color: rgba(232,227,214,.45); }
+  .mini-btn:disabled { opacity: .3; cursor: default; }
+  .hand {
+    display: flex; gap: 8px; justify-content: center;
+    min-height: 92px; flex-wrap: wrap;
+  }
+  .card, .slot {
+    position: relative; width: 62px; height: 88px; border-radius: 9px;
+    box-sizing: border-box;
+  }
+  .slot {
+    border: 1.5px dashed rgba(201,169,97,.3);
+    background: rgba(255,215,106,.04);
+    animation: deal .26s ease-out backwards;
+  }
+  .card {
+    border: none; padding: 0; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: transform .14s ease, box-shadow .14s, opacity .14s, filter .14s;
+    font-family: inherit;
+    animation: deal .26s cubic-bezier(.2,.9,.3,1.2) backwards;
+  }
+  @keyframes deal { from { transform: translateY(18px) scale(.94); opacity: 0; } }
+  .card.n {
+    background: linear-gradient(160deg, #fffdf6, #ece5d2);
+    color: var(--ink); box-shadow: 0 6px 14px -6px #000, inset 0 0 0 1px rgba(0,0,0,.06);
+  }
+  .card.o {
+    background: linear-gradient(160deg, #fffdf6, #ece5d2);
+    color: #28497c; box-shadow: 0 6px 14px -6px #000, inset 0 0 0 1px rgba(0,0,0,.06);
+  }
+  .card.o.red .suit { color: var(--red); }
+  .card.o.wildc {
+    border: 1.5px dashed rgba(201,169,97,.75);
+    color: var(--gold-dim);
+    background: linear-gradient(160deg, #fffbef, #f3ead2);
+  }
+  .card .rank { font-size: 26px; font-weight: 600; line-height: 1; }
+  .card .suit { font-size: 15px; line-height: 1.3; }
+  .card .gl { font-size: 30px; font-weight: 300; line-height: 1; }
+  .card .sub { font-size: 10px; letter-spacing: .16em; opacity: .55; margin-top: 3px; }
+  .card.n.red { color: var(--red); }
+  .card.playable:hover { transform: translateY(-6px); }
+  .card.playable { box-shadow: 0 6px 16px -6px #000, 0 0 0 1.5px rgba(255,215,106,.5); }
+  .card.dim { opacity: .34; filter: saturate(.55); cursor: default; }
+  .card.tip::after {
+    content: ""; position: absolute; inset: -4px; border-radius: 12px;
+    border: 1px dashed rgba(255,215,106,.45); pointer-events: none;
+  }
+
+  /* ---------- 底部动作 ---------- */
+  footer {
+    flex: 0 0 auto; display: flex; gap: 10px;
+    padding: 2px 18px calc(16px + env(safe-area-inset-bottom));
+  }
+  .btn {
+    flex: 1; height: 50px; border-radius: 13px; cursor: pointer;
+    font-family: inherit; font-size: 15px; letter-spacing: .06em;
+    border: 1px solid rgba(201,169,97,.32);
+    background: rgba(201,169,97,.08); color: var(--gold);
+    transition: transform .1s, background .15s, opacity .15s;
+  }
+  .btn:active { transform: scale(.985); background: rgba(201,169,97,.18); }
+  .btn.primary {
+    background: linear-gradient(180deg, #d8bb78, #b99a52);
+    color: #1d1a12; border-color: transparent; font-weight: 600;
+    box-shadow: 0 8px 20px -10px #c9a961;
+  }
+  .btn.primary:active { background: linear-gradient(180deg, #c9ab68, #a98b46); }
+  .btn:disabled { opacity: .32; cursor: default; transform: none; }
+  .btn.ghost { flex: 0 0 76px; font-size: 14px; padding: 0; }
+  .btn.pulse, .mini-btn.pulse { animation: pulse 1.2s ease-in-out infinite; border-color: var(--gold); }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(201,169,97,.5); }
+    50% { box-shadow: 0 0 0 8px rgba(201,169,97,0); }
+  }
+
+  /* ---------- 弹层 ---------- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(3,10,8,.82);
+    display: none; align-items: center; justify-content: center; padding: 24px;
+    backdrop-filter: blur(3px); z-index: 20;
+  }
+  .overlay.show { display: flex; animation: fade .2s; }
+  @keyframes fade { from { opacity: 0; } }
+  .sheet {
+    width: 100%; max-width: 360px;
+    background: #0e2a23; border: 1px solid rgba(201,169,97,.28);
+    border-radius: 18px; padding: 22px 20px;
+    box-shadow: 0 30px 60px -20px #000;
+  }
+  .sheet h2 { margin: 0 0 4px; font-size: 18px; font-weight: 600; color: var(--gold); letter-spacing: .06em; }
+  .sheet p { margin: 6px 0 0; font-size: 13px; line-height: 1.7; color: var(--text-dim); }
+  .sheet .big { font-size: 40px; color: var(--hu); font-weight: 300; font-variant-numeric: tabular-nums; margin: 10px 0 2px; }
+  .picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 14px; }
+  .picker button, .picker .op {
+    height: 44px; border-radius: 9px; border: 1px solid rgba(201,169,97,.25);
+    background: rgba(255,255,255,.04); color: var(--text); font-size: 16px; font-family: inherit;
+    cursor: pointer; font-variant-numeric: tabular-nums;
+  }
+  .picker button:disabled { opacity: .25; }
+  .picker button:active { background: rgba(201,169,97,.2); }
+  .sheet .actions { display: flex; gap: 10px; margin-top: 18px; }
+  .sheet .actions .btn { height: 46px; }
+
+  /* ---------- 胡牌特效 ---------- */
+  .hu-burst {
+    position: fixed; inset: 0; pointer-events: none; z-index: 30;
+    background: radial-gradient(40% 30% at 50% 45%, rgba(255,215,106,.5), transparent 70%);
+    opacity: 0;
+  }
+  .hu-burst.go { animation: burst .55s ease-out; }
+  @keyframes burst { 0% { opacity: 1; } 100% { opacity: 0; } }
+  .hu-word {
+    position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(.6);
+    font-size: 64px; color: var(--hu); font-weight: 600; letter-spacing: .1em;
+    text-shadow: 0 0 40px rgba(255,215,106,.6); pointer-events: none; z-index: 31; opacity: 0;
+  }
+  .hu-word.go { animation: huword .7s cubic-bezier(.2,1.2,.3,1); }
+  @keyframes huword {
+    0% { opacity: 0; transform: translate(-50%,-50%) scale(.6); }
+    30% { opacity: 1; transform: translate(-50%,-50%) scale(1.08); }
+    100% { opacity: 0; transform: translate(-50%,-58%) scale(1); }
+  }
+  .toast {
+    position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%) translateY(10px);
+    background: rgba(14,42,35,.96); border: 1px solid rgba(201,169,97,.4);
+    color: var(--hu); padding: 9px 16px; border-radius: 999px;
+    font-size: 13px; letter-spacing: .04em; opacity: 0; transition: all .3s; z-index: 25;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-height: 700px) {
+    .card, .slot { width: 54px; height: 76px; }
+    .card .rank { font-size: 22px; }
+    .value { font-size: 44px; }
+  }
+  @media (max-width: 430px) {
+    .card, .slot { width: 51px; height: 74px; }
+    .card .rank { font-size: 21px; }
+    .hand { gap: 6px; }
+    .brand b { font-size: 19px; }
+    .score .v { font-size: 17px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">胡<b>1024</b></div>
+  <button class="icon-btn" id="helpBtn" aria-label="规则">?</button>
+  <div class="scores">
+    <div class="score hu" id="huScore" title="胡牌记录"><span class="k">胡</span><span class="v" id="huCount">0</span></div>
+    <div class="score" id="bestScore" title="历史对局"><span class="k">最高</span><span class="v" id="best">0</span></div>
+  </div>
+</header>
+
+<main>
+  <div class="felt">
+    <div class="value" id="value">0<span class="target">TARGET 1024</span></div>
+    <div class="expr" id="expr"><span class="empty">出牌，让牌桌走向 1024</span></div>
+    <div class="deck-row">
+      <span class="deck-badge" id="deckPile"></span>
+      <span class="deck-badge discard" id="discardPile"></span>
+      <span class="deckinfo copyable" id="deckInfo"></span>
+    </div>
+  </div>
+</main>
+
+<div class="stuckbar" id="stuckBar">已无可放的牌 · 点「重开」收场</div>
+
+<div class="hand-wrap">
+  <div class="hand-top">
+    <button class="mini-btn" id="discardBtn">弃牌</button>
+  </div>
+  <div class="hand" id="hand"></div>
+</div>
+
+<footer>
+  <button class="btn ghost" id="undoBtn" disabled>撤销</button>
+  <button class="btn ghost" id="restartBtn">重开</button>
+  <button class="btn primary" id="endTurnBtn" disabled>结束出牌</button>
+</footer>
+
+<div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
+<div class="hu-burst" id="burst"></div>
+<div class="hu-word" id="huWord">胡</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ 引擎（与 sim/sim.mjs 同一套规则） ============
+const TARGET = 1024;
+const HAND_SIZE = 6;          // 起手张数 = 手牌上限
+
+const freshState = () => ({ total: 0, sign: 1, curV: null, last: null, lastOp: null });
+const val = s => s.total + (s.curV === null ? 0 : s.sign * s.curV);
+
+function placeNum(s, n) {
+  if (s.last === 'n') return null;
+  if (s.last === null) return { total: 0, sign: 1, curV: n, last: 'n', lastOp: null };
+  if (s.lastOp === '*') return { ...s, curV: s.curV * n, last: 'n', lastOp: null };
+  if (s.lastOp === '/') {
+    if (s.curV % n !== 0) return null;
+    return { ...s, curV: s.curV / n, last: 'n', lastOp: null };
+  }
+  return { ...s, curV: n, last: 'n', lastOp: null };
+}
+
+function placeOp(s, o) {
+  if (s.last !== 'n') return null;
+  if (o === '+') return { total: s.total + s.sign * s.curV, sign: 1, curV: null, last: 'o', lastOp: '+' };
+  if (o === '-') return { total: s.total + s.sign * s.curV, sign: -1, curV: null, last: 'o', lastOp: '-' };
+  return { ...s, last: 'o', lastOp: o };
+}
+
+// ============ 牌组（108 张） ============
+const SUITS = ['♠', '♥', '♦', '♣'];
+const OPS = ['+', '-', '×', '÷'];
+const OP_TO_ENGINE = { '+': '+', '-': '-', '×': '*', '÷': '/' };
+const RANK_LABEL = { 1: 'A', 11: 'J', 12: 'Q', 13: 'K' };
+const rankLabel = v => RANK_LABEL[v] || String(v);
+
+function buildDeck() {
+  const d = [];
+  for (let v = 1; v <= 13; v++) for (const s of SUITS) d.push({ kind: 'num', v, suit: s });
+  d.push({ kind: 'num', joker: true }, { kind: 'num', joker: true });
+  for (let i = 0; i < 13; i++) for (const o of OPS) d.push({ kind: 'op', o, suit: SUITS[i % 4] });
+  d.push({ kind: 'op', wild: true }, { kind: 'op', wild: true });
+  return d;
+}
+function shuffle(a, rnd = Math.random) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// 种子随机（与 sim/sim.mjs 同款算法）。状态挂在 S.rngState 上（可 JSON 序列化），
+// 自动存档恢复时用 makeRng(S.rngState) 重建，随机流从断点处无缝接上
+function makeRng(state) {
+  return function () {
+    state.a = (state.a + 0x6d2b79f5) | 0;
+    let t = Math.imul(state.a ^ (state.a >>> 15), 1 | state.a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const URL_SEED = (() => {
+  try {
+    const s = new URLSearchParams(location.search).get('seed');
+    return s && /^\d+$/.test(s) ? Number(s) % 2 ** 31 : null;
+  } catch { return null; }
+})();
+
+// ============ 状态 ============
+// 沙箱 iframe 里 localStorage 可能直接抛异常，包一层
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+
+const S = {
+  deck: [],
+  hand: [],
+  table: [],          // {card, ch}
+  st: freshState(),
+  hu: 0,
+  huLog: [],          // 本局胡牌记录：{expr, gains}（点桌角「胡」徽章回看）
+  placedThisTurn: 0,
+  run: { tianHu: 0, wangZha: 0, naked: 0 },
+  history: [],        // 本回合落子快照（撤销用）
+  discarded: 0,       // 本局已弃张数（弃牌移出本局，不洗回）
+  discardPile: [],    // 弃牌堆实体（供详情查看）
+  seed: 0,            // 局种子（显示在桌角，URL ?seed= 可复盘）
+  rng: Math.random,
+  best: Number(store.get('h1024.best') || 0),
+};
+
+const $ = id => document.getElementById(id);
+const el = { hand: $('hand'), expr: $('expr'), value: $('value'), hu: $('huCount'), best: $('best'), endTurn: $('endTurnBtn') };
+
+// ============ 合法性 ============
+function placementFor(card) {
+  // 返回：null 不可放；{ch} 可直接放；{pick:'num'|'op'} 需要选值/选符号
+  if (S.st.last !== 'n') {                      // 需要数字
+    if (card.kind === 'num') return card.joker ? { pick: 'num' } : { ch: card.v };
+    return null;
+  }
+  if (card.kind === 'op') return card.wild ? { pick: 'op' } : { ch: card.o };
+  return null;
+}
+function hasAnyMove() {
+  return S.hand.some(c => {
+    const p = placementFor(c);
+    if (!p) return false;
+    if (p.pick === 'num') {                     // 王：只要有一个能整除的值就算能放
+      if (S.st.lastOp === '/') {
+        for (let v = 1; v <= 13; v++) if (S.st.curV % v === 0) return true;
+        return false;
+      }
+      return true;
+    }
+    if (p.pick === 'op') return true;           // 任意运算符总能放
+    const next = c.kind === 'num' ? placeNum(S.st, p.ch) : placeOp(S.st, OP_TO_ENGINE[p.ch]);
+    return !!next;
+  });
+}
+
+// ============ 出牌 ============
+function place(cardIdx, ch) {
+  const card = S.hand[cardIdx];
+  if (!card) return;
+  const next = card.kind === 'num' ? placeNum(S.st, ch) : placeOp(S.st, OP_TO_ENGINE[ch]);
+  if (!next) return;
+
+  S.history.push({ st: S.st, card, ch, idx: cardIdx }); // 撤销用快照
+  S.st = next;
+  S.table.push({ card, ch });
+  S.hand.splice(cardIdx, 1);
+  S.placedThisTurn++;
+
+  render();
+  if (S.st.last === 'n' && val(S.st) === TARGET) { doHu(); return; }
+  // 中途手牌暂时无牌可放不算死局——结束出牌补牌后才有定论（endTurn 里判）
+}
+
+function doHu() {
+  const cardsThisTurn = S.placedThisTurn;
+  const tableLen = S.table.length;
+  const jokers = S.table.filter(t => t.card.joker).length;
+
+  // 成就
+  const gains = [];
+  if (cardsThisTurn >= 4) { S.run.tianHu++; gains.push('🥇 天胡'); }
+  if (jokers === 2) { S.run.wangZha++; gains.push('👑 王炸'); }
+  if (tableLen <= 7) { S.run.naked++; gains.push('🎯 裸胡'); }
+
+  // 记录本胡算式（桌面马上要清空）
+  S.huLog.push({
+    expr: S.table.map(t => t.card.kind === 'op' ? t.ch : rankLabel(t.ch)).join(' '),
+    gains: gains.slice(),
+  });
+
+  // 桌牌洗回牌库
+  for (const t of S.table) S.deck.push(t.card);
+  shuffle(S.deck, S.rng);
+  S.table = [];
+  S.st = freshState();
+  S.history = [];          // 胡已结算，本回合不可再回滚
+  S.hu++;
+  if (S.hu > S.best) { S.best = S.hu; store.set('h1024.best', String(S.best)); }
+
+  burst();
+  if (gains.length) toast(gains.join('  '));
+  render();
+  // 胡完手里暂时没牌可放不算死局，结束出牌补牌后才有定论
+}
+
+function endTurn() {
+  if (S.placedThisTurn === 0) return;
+  while (S.hand.length < HAND_SIZE && S.deck.length) {
+    const c = S.deck.pop();
+    c.slot = freeSlot();          // 新牌坐进最左的空位
+    S.hand.push(c);
+  }
+  S.placedThisTurn = 0;
+  S.history = [];     // 回合结束即定局，不可再撤销
+  render();
+}
+
+// 手牌座位号：出牌后空位留在原位，补牌坐空位
+function freeSlot() {
+  for (let s = 0; s < HAND_SIZE; s++) if (!S.hand.some(c => c.slot === s)) return s;
+  return HAND_SIZE - 1;
+}
+
+// 撤销本回合上一次落子（胡牌后、跨回合后不可用）
+function undo() {
+  const h = S.history.pop();
+  if (!h) return;
+  S.st = h.st;
+  S.table.pop();
+  S.hand.splice(Math.min(h.idx, S.hand.length), 0, h.card);
+  S.placedThisTurn = Math.max(0, S.placedThisTurn - 1);
+  render();
+}
+
+// 牌堆详情：点数 / 运算符分布
+function pileDetail(title, cards) {
+  const num = Array(14).fill(0);
+  let joker = 0, wild = 0;
+  const op = { '+': 0, '-': 0, '×': 0, '÷': 0 };
+  for (const c of cards) {
+    if (c.kind === 'num') c.joker ? joker++ : num[c.v]++;
+    else c.wild ? wild++ : op[c.o]++;
+  }
+  const numCells = Array.from({ length: 13 }, (_, k) => k + 1)
+    .map(v => cell(rankLabel(v), num[v])).join('');
+  const opCells = OPS.map(o => cell(o, op[o])).join('')
+    + cell('任意', wild) + cell('✦', joker);
+  openSheet(`
+    <h2>${title} · ${cards.length} 张</h2>
+    <div class="pgrid">${numCells}</div>
+    <div class="pgrid">${opCells}</div>
+    <div class="actions"><button class="btn primary" id="pdClose">知道了</button></div>
+  `, () => { $('pdClose').onclick = closeSheet; });
+
+  function cell(label, n) {
+    return `<div class="pcell${n ? '' : ' zero'}"><b>${label}</b><i>${n}</i></div>`;
+  }
+}
+// 自动存档：整局状态落盘（S.rng 是函数，JSON.stringify 自动跳过；RNG 状态在 S.rngState 里）
+// 复盘会话（URL 带 ?seed=）不落盘，避免复盘覆盖正在进行的对局
+const SAVE_KEY = 'h1024.save';
+function saveGame() {
+  if (URL_SEED) return;
+  store.set(SAVE_KEY, JSON.stringify(S));
+}
+function resumeGame() {
+  try {
+    const d = JSON.parse(store.get(SAVE_KEY) || 'null');
+    if (!d || !Array.isArray(d.deck) || !d.deck.length) return false;
+    Object.assign(S, d);                 // 缺的字段（旧版存档）保留 S 默认值
+    S.rng = makeRng(S.rngState);         // 重建 RNG，从断点接上随机流
+    return true;
+  } catch { return false; }
+}
+function askResume() {
+  render();
+  openSheet(`
+    <h2>继续上局？</h2>
+    <p>上次有一局没打完（${S.hu} 胡 · 种子 ${S.seed}）。</p>
+    <div class="actions">
+      <button class="btn ghost" id="rNew">新开一局</button>
+      <button class="btn primary" id="rGo">继续</button>
+    </div>
+  `, () => {
+    $('rGo').onclick = closeSheet;
+    $('rNew').onclick = () => { closeSheet(); newGame(); };
+  });
+}
+
+// 历史对局：重开时记下有胡的局（最近 20 局，localStorage 持久化）
+function loadHist() {
+  try { return JSON.parse(store.get('h1024.hist') || '[]'); } catch { return []; }
+}
+function saveHistEntry() {
+  if (S.hu <= 0) return;
+  const hist = loadHist();
+  hist.unshift({ seed: S.seed, hu: S.hu, ts: Date.now() });
+  store.set('h1024.hist', JSON.stringify(hist.slice(0, 20)));
+}
+function showHistory() {
+  const hist = loadHist();
+  const rows = hist.map((g, i) => {
+    const d = new Date(g.ts), p = n => String(n).padStart(2, '0');
+    return `<div class="hurow" data-seed="${g.seed}" style="cursor:pointer"><i>#${i + 1}</i><b>${g.hu} 胡</b><em>${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())} · 种子 ${g.seed}</em></div>`;
+  }).join('');
+  openSheet(`
+    <h2>历史对局 · ${hist.length} 局</h2>
+    ${rows || '<p>还没有完成的对局</p>'}
+    <p>点一局复制该种子的复盘链接。</p>
+    <div class="actions"><button class="btn primary" id="hsClose">知道了</button></div>
+  `, () => {
+    $('hsClose').onclick = closeSheet;
+    document.querySelectorAll('.hurow[data-seed]').forEach(node => {
+      node.addEventListener('click', async () => {
+        const link = `${location.origin}${location.pathname}?seed=${node.dataset.seed}`;
+        try { await navigator.clipboard.writeText(link); toast('已复制复盘链接'); }
+        catch { toast(`种子 ${node.dataset.seed}`); }
+      });
+    });
+  });
+}
+
+// 胡牌记录：本局每胡一次的算式与成就
+function showHuLog() {
+  const rows = S.huLog.map((r, i) => `
+    <div class="hurow"><i>#${i + 1}</i><b>${r.expr}</b>${r.gains.length ? `<em>${r.gains.join(' ')}</em>` : ''}</div>`).join('');
+  openSheet(`
+    <h2>胡牌记录 · ${S.huLog.length} 胡</h2>
+    ${rows || '<p>本局还没有胡牌</p>'}
+    <div class="actions"><button class="btn primary" id="hlClose">知道了</button></div>
+  `, () => { $('hlClose').onclick = closeSheet; });
+}
+
+// 弃牌实际执行：全部手牌移出本局（不洗回），再从牌库补至上限
+function doDiscard() {
+  if (!S.hand.length) return;
+  S.discarded += S.hand.length;
+  S.discardPile.push(...S.hand);
+  S.hand = [];
+  while (S.hand.length < HAND_SIZE && S.deck.length) {
+    const c = S.deck.pop();
+    c.slot = freeSlot();
+    S.hand.push(c);
+  }
+  render();
+}
+
+function discardAll() {
+  if (!S.hand.length) return;
+  openSheet(`
+    <h2>弃牌</h2>
+    <p>弃掉全部 ${S.hand.length} 张手牌，再从牌库补至上限。弃掉的牌<b style="color:#ffd76a">移出本局、不再洗回</b>。</p>
+    <div class="actions">
+      <button class="btn ghost" id="dCancel">取消</button>
+      <button class="btn primary" id="dOk">弃掉</button>
+    </div>
+  `, () => {
+    $('dCancel').onclick = closeSheet;
+    $('dOk').onclick = () => { closeSheet(); doDiscard(); };
+  });
+}
+
+// 死局是推导态不是存储态：没出过牌（无法结束回合去补牌）且无牌可放
+function isStuck() {
+  return S.placedThisTurn === 0 && !hasAnyMove();
+}
+
+// 死局时具体说明缺什么
+function stuckText() {
+  if (S.st.last === 'n') return '需要运算符 · 手中全是数字牌';
+  if (S.st.lastOp === '/') {
+    const ds = [];
+    for (let v = 1; v <= 13; v++) if (S.st.curV % v === 0) ds.push(rankLabel(v));
+    return `需要能整除 ${S.st.curV} 的数字（可跟：${ds.join(' ')}）`;
+  }
+  return '需要数字 · 手中全是运算符牌';
+}
+
+function newGame(seed) {
+  saveHistEntry();  // 上一局有胡则记入历史
+  // 种子优先级：显式传入 > URL ?seed=（每局固定，方便测试）> 随机
+  S.seed = seed ?? URL_SEED ?? Math.floor(Math.random() * 2 ** 31);
+  S.rngState = { a: S.seed | 0 };
+  S.rng = makeRng(S.rngState);
+  S.deck = shuffle(buildDeck(), S.rng);
+  S.hand = [];
+  for (let i = 0; i < HAND_SIZE; i++) { const c = S.deck.pop(); c.slot = i; S.hand.push(c); }
+  S.table = [];
+  S.st = freshState();
+  S.hu = 0;
+  S.huLog = [];
+  S.placedThisTurn = 0;
+  S.history = [];
+  S.discarded = 0;
+  S.discardPile = [];
+  S.run = { tianHu: 0, wangZha: 0, naked: 0 };
+  closeSheet();
+  render();
+}
+
+// ============ 渲染 ============
+function render() {
+  // 总值
+  const v = val(S.st);
+  el.value.textContent = String(v);
+  el.value.className = 'value' + (v === TARGET ? ' hit' : v >= 512 ? ' near' : '') ;
+  el.value.insertAdjacentHTML('beforeend', '<span class="target">TARGET 1024</span>');
+  el.hu.textContent = S.hu;
+  el.best.textContent = S.best;
+
+  // 表达式
+  if (!S.table.length) {
+    el.expr.innerHTML = '<span class="empty">出牌，让牌桌走向 1024</span>';
+  } else {
+    // 标记最后一个乘积项
+    let termStart = 0;
+    S.table.forEach((t, i) => {
+      if (t.card.kind === 'op' && (t.ch === '+' || t.ch === '-')) termStart = i + 1;
+    });
+    el.expr.innerHTML = S.table.map((t, i) => {
+      const isOp = t.card.kind === 'op';
+      const isWild = t.card.kind === 'op' ? t.card.wild : t.card.joker;
+      const cls = ['tok', isOp ? 'o' : 'n'];
+      if (i >= termStart) cls.push('term-last');
+      if (isWild) cls.push('wild');
+      const label = isOp ? t.ch : rankLabel(t.ch);
+      return `<span class="${cls.join(' ')}">${label}${isWild ? '<i class="star">✦</i>' : ''}</span>`;
+    }).join('');
+    el.expr.scrollTop = el.expr.scrollHeight;
+  }
+
+  // 手牌：按座位号渲染，出牌后空位留在原位
+  el.hand.innerHTML = '';
+  for (let s = 0; s < HAND_SIZE; s++) {
+    const idx = S.hand.findIndex(c => c.slot === s);
+    if (idx < 0) { // 空位占位
+      const d = document.createElement('div');
+      d.className = 'slot';
+      d.style.animationDelay = (s * 30) + 'ms';
+      el.hand.appendChild(d);
+      continue;
+    }
+    const card = S.hand[idx];
+    const p = placementFor(card);
+    const can = !!p;
+    const b = document.createElement('button');
+    b.className = 'card ' + (card.kind === 'num' ? 'n' : 'o') + (can ? ' playable' : ' dim');
+    if (card.kind === 'num') {
+      if (card.joker) {
+        b.innerHTML = `<span class="gl">✦</span><span class="sub">万能</span>`;
+      } else {
+        b.classList.toggle('red', card.suit === '♥' || card.suit === '♦');
+        b.innerHTML = `<span class="rank">${rankLabel(card.v)}</span><span class="suit">${card.suit}</span>`;
+      }
+    } else {
+      b.classList.toggle('red', !!card.suit && (card.suit === '♥' || card.suit === '♦'));
+      if (card.wild) b.classList.add('wildc');
+      b.innerHTML = card.wild
+        ? `<span class="rank">?</span><span class="sub">任意运算</span>`
+        : `<span class="rank">${card.o}</span><span class="suit">${card.suit ?? ''}</span>`;
+    }
+    b.style.animationDelay = (s * 30) + 'ms';
+    if (can) b.onclick = () => onCardClick(idx);
+    el.hand.appendChild(b);
+  }
+
+  const stuck = isStuck();
+  el.endTurn.disabled = S.placedThisTurn === 0;
+  // 中途无牌可放：不算死局，但提示玩家该结束出牌去补牌了
+  el.endTurn.classList.toggle('pulse', !stuck && S.placedThisTurn > 0 && !hasAnyMove());
+  $('undoBtn').disabled = S.history.length === 0;
+  $('discardBtn').disabled = S.hand.length === 0;
+  // 僵局且牌库有牌：弃牌是活路，呼吸提醒
+  $('discardBtn').classList.toggle('pulse', stuck && S.deck.length > 0 && S.hand.length > 0);
+  $('restartBtn').classList.toggle('pulse', stuck);
+  $('stuckBar').classList.toggle('show', stuck);
+  if (stuck) $('stuckBar').textContent = stuckText()
+    + (S.deck.length > 0 ? ` · 可「弃牌」换血（剩 ${S.deck.length} 张）` : ' · 点「重开」收场');
+  const willDraw = Math.min(HAND_SIZE - S.hand.length, S.deck.length);
+  el.endTurn.textContent = S.placedThisTurn > 0 && willDraw > 0 ? `结束出牌 · 补 ${willDraw} 张` : '结束出牌';
+  $('deckPile').textContent = `牌库 ${S.deck.length}`;
+  $('discardPile').textContent = `弃牌 ${S.discarded}`;
+  const di = $('deckInfo');
+  di.textContent = `种子 ${S.seed}`;
+  di.classList.toggle('copyable', true);
+  saveGame();   // 渲染是所有操作的汇聚点，每帧落盘 = 自动存档
+}
+
+// ============ 选值与选符号 ============
+function onCardClick(i) {
+  const card = S.hand[i];
+  const p = placementFor(card);
+  if (!p) return;
+  if (p.pick === 'num') {
+    const ok = v => S.st.lastOp === '/' ? S.st.curV % v === 0 : true;
+    openSheet(`
+      <h2>这张王当几用</h2>
+      <p>选一个数值替它上桌。</p>
+      <div class="picker">${Array.from({ length: 13 }, (_, k) => k + 1)
+        .map(v => `<button data-v="${v}" ${ok(v) ? '' : 'disabled'}>${rankLabel(v)}</button>`).join('')}</div>
+    `, () => {
+      document.querySelectorAll('.picker button').forEach(b => {
+        b.onclick = () => { closeSheet(); place(i, Number(b.dataset.v)); };
+      });
+    });
+    return;
+  }
+  if (p.pick === 'op') {
+    openSheet(`
+      <h2>这张王当什么用</h2>
+      <p>选一个运算符替它上桌。</p>
+      <div class="picker" style="grid-template-columns:repeat(4,1fr)">
+        ${OPS.map(o => `<button data-o="${o}">${o}</button>`).join('')}
+      </div>
+    `, () => {
+      document.querySelectorAll('.picker button').forEach(b => {
+        b.onclick = () => { closeSheet(); place(i, b.dataset.o); };
+      });
+    });
+    return;
+  }
+  place(i, p.ch);
+}
+
+// ============ 弹层 / 特效 ============
+function openSheet(html, after) {
+  $('sheet').innerHTML = html;
+  $('overlay').classList.add('show');
+  if (after) after();
+}
+function closeSheet() { $('overlay').classList.remove('show'); }
+
+function burst() {
+  const b = $('burst'), w = $('huWord');
+  b.classList.remove('go'); w.classList.remove('go');
+  void b.offsetWidth;
+  b.classList.add('go'); w.classList.add('go');
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+// ============ 事件 ============
+$('endTurnBtn').onclick = endTurn;
+$('undoBtn').onclick = undo;
+$('discardBtn').onclick = discardAll;
+$('huScore').onclick = showHuLog;
+$('bestScore').onclick = showHistory;
+if (typeof window.addEventListener === 'function') {
+  window.addEventListener('keydown', e => {
+    if (e.key === 'z' || e.key === 'Z' || (e.metaKey && e.key === 'z') || (e.ctrlKey && e.key === 'z')) {
+      e.preventDefault();
+      undo();
+    }
+  });
+}
+$('restartBtn').onclick = () => {
+  if (S.hu > 0) {
+    openSheet(`
+      <h2>重开本局</h2>
+      <p>当前 ${S.hu} 胡会作废（不覆盖最高纪录）。</p>
+      <div class="actions">
+        <button class="btn ghost" id="cancelBtn">继续玩</button>
+        <button class="btn primary" id="okBtn">重开</button>
+      </div>
+    `, () => {
+      $('cancelBtn').onclick = closeSheet;
+      $('okBtn').onclick = () => { closeSheet(); newGame(); };
+    });
+  } else newGame();
+};
+$('helpBtn').onclick = () => openSheet(`
+  <h2>怎么玩</h2>
+  <p>往牌桌上依次放牌，数字和运算符必须交替。牌桌是一整个算式，按四则运算优先级求值。</p>
+  <p>总值恰好等于 <b style="color:#ffd76a">1024</b> 就「胡」——桌牌洗回牌库，继续下一手。</p>
+  <p>手牌 ${HAND_SIZE} 张，出几张补几张，一张都没出不能结束出牌。牌一旦上桌就收不回来——但<b>本回合内</b>可以撤销，结束出牌后就定局了。</p>
+  <p>凑不上想换血？「弃牌」一次弃掉整手牌再补满——但弃掉的牌<b>移出本局</b>，牌库会越弃越薄。</p>
+  <p style="color:#8a7442">最短的一手要 7 张牌，例如 13 × 13 × 6 + 10 或 8 × 8 × 4 × 4</p>
+  <div class="actions"><button class="btn primary" id="closeHelp">知道了</button></div>
+`, () => { $('closeHelp').onclick = closeSheet; });
+$('overlay').onclick = e => { if (e.target === $('overlay')) closeSheet(); };
+$('deckPile').onclick = () => pileDetail('牌库', S.deck);
+$('discardPile').onclick = () => pileDetail('弃牌堆', S.discardPile);
+$('deckInfo').onclick = async () => {
+  const link = `${location.origin}${location.pathname}?seed=${S.seed}`;
+  try {
+    await navigator.clipboard.writeText(link);
+    toast('已复制复盘链接');
+  } catch {
+    toast(`种子 ${S.seed}`);
+  }
+};
+
+// ============ 启动 ============
+const BUILD = '20261022.9';
+console.log(`[胡1024] build ${BUILD}`);
+if (typeof window.addEventListener === 'function') {
+  window.addEventListener('error', e => toast('出错了：' + e.message));
+}
+// 启动：复盘链接（?seed=，固定种子不读存档）> 自动存档续玩 > 新局
+if (URL_SEED) newGame();
+else if (resumeGame()) askResume();
+else newGame();
+</script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+// ============ 游戏动作（操作 S，每步落盘） ============
+import { HAND_SIZE, TARGET, freshState, placeNum, placeOp, val } from '../engine/engine'
+import { OP_TO_ENGINE, buildDeck, rankLabel } from '../engine/cards'
+import { makeRng, shuffle } from '../engine/rng'
+import type { Card, OpSymbol } from '../engine/types'
+import { S, URL_SEED, fx, saveGame, saveHistEntry, store, toast } from './state'
+
+// 返回：null 不可放；{ch} 可直接放；{pick:'num'|'op'} 需要选值/选符号
+export function placementFor(card: Card): { ch?: number | OpSymbol; pick?: 'num' | 'op' } | null {
+  if (S.st.last !== 'n') {                      // 需要数字
+    if (card.kind === 'num') {
+      if (card.joker) return { pick: 'num' }
+      if (S.st.lastOp === '/' && S.st.curV! % card.v !== 0) return null   // ÷ 后必须整除
+      return { ch: card.v }
+    }
+    return null
+  }
+  if (card.kind === 'op') return card.wild ? { pick: 'op' } : { ch: card.o! }
+  return null
+}
+
+// 不可打出的原因（placementFor 为 null 时调用），点击不可打的牌时轻提示
+export function unplayableReason(card: Card): string {
+  if (card.kind === 'op') return '运算符后面只能跟随数字'
+  if (S.st.lastOp === '/' && S.st.curV! % card.v !== 0) return '该数字不能被整除'
+  return '数字和数字之前必须有运算符'
+}
+
+// 手牌座位号：出牌后空位留在原位，补牌坐空位
+export function freeSlot(): number {
+  for (let s = 0; s < HAND_SIZE; s++) if (!S.hand.some(c => c.slot === s)) return s
+  return HAND_SIZE - 1
+}
+
+// ---- 快照式撤销：本回合内落子/弃牌前压入整局快照，跨回合清空 ----
+const UNDO_CAP = 60
+function pushUndo() {
+  S.undoStack.push(JSON.stringify({
+    deck: S.deck, hand: S.hand, table: S.table, st: S.st,
+    hu: S.hu, huLog: S.huLog, placedThisTurn: S.placedThisTurn,
+    discarded: S.discarded, discardPile: S.discardPile,
+    run: S.run, best: S.best, rngState: S.rngState,
+  }))
+  if (S.undoStack.length > UNDO_CAP) S.undoStack.shift()
+}
+
+// 从牌库补牌至上限（回合开始/胡牌后共用）；新抽的牌标记 drawn（发牌动画，App 里逐张飞入）
+function refillHand() {
+  while (S.hand.length < HAND_SIZE && S.deck.length) {
+    const c = S.deck.pop()!
+    c.slot = freeSlot()     // 新牌坐进最左的空位
+    c.drawn = true
+    S.hand.push(c)
+  }
+  if (S.hand.some(c => c.drawn)) {
+    fx.drawFrom = 'deck'
+    fx.drawAt++
+  }
+}
+
+export function place(cardIdx: number, ch: number | OpSymbol, opts: { deferHu?: boolean } = {}): boolean {
+  const card = S.hand[cardIdx]
+  if (!card) return false
+  const next = card.kind === 'num' ? placeNum(S.st, ch as number) : placeOp(S.st, OP_TO_ENGINE[ch as OpSymbol])
+  if (!next) return false
+
+  pushUndo()
+  S.st = next
+  S.table.push({ card, ch })
+  S.hand.splice(cardIdx, 1)
+  S.placedThisTurn++
+  saveGame()
+  const hu = S.st.last === 'n' && val(S.st) === TARGET
+  if (hu && !opts.deferHu) doHu()     // UI 传 deferHu：先播飞牌动画，再手动 doHu 结算
+  return hu
+  // 中途手牌暂时无牌可放不算死局——结束回合补牌后才有定论
+}
+
+export function doHu() {
+  const cardsThisTurn = S.placedThisTurn
+  const tableLen = S.table.length
+  const jokers = S.table.filter(t => t.card.kind === 'num' && t.card.joker).length
+
+  // 成就
+  const gains: string[] = []
+  if (cardsThisTurn >= 4) { S.run.tianHu++; gains.push('🥇 天胡') }
+  if (jokers === 2) { S.run.wangZha++; gains.push('👑 王炸') }
+  if (tableLen <= 7) { S.run.naked++; gains.push('🎯 裸胡') }
+
+  // 记录本胡算式（桌面马上要清空）
+  S.huLog.push({
+    expr: S.table.map(t => t.card.kind === 'op' ? String(t.ch) : rankLabel(t.ch as number)).join(' '),
+    gains: gains.slice(),
+  })
+
+  // 桌牌洗回牌库，回合计入本回合；自动补满手牌继续
+  const rng = makeRng(S.rngState)
+  for (const t of S.table) S.deck.push(t.card)
+  shuffle(S.deck, rng)
+  S.table = []
+  S.st = freshState()
+  S.hu++
+  refillHand()
+  if (S.hu > S.best) { S.best = S.hu; store.set('h1024.best', String(S.best)) }
+  fx.burstAt++
+  if (gains.length) toast(gains.join('  '))
+  saveGame()
+}
+
+export function endTurn() {
+  // 满手牌无法结束回合（无牌可补）；不满即补满并进入下一回合
+  if (S.hand.length >= HAND_SIZE) return
+  refillHand()
+  S.placedThisTurn = 0
+  S.turns++
+  S.undoStack = []          // 回合结束即定局，跨回合不可撤销
+  saveGame()
+}
+
+// 撤销本回合上一次操作（落子/弃牌，快照式回滚；跨回合后不可用）
+export function undo() {
+  const snap = S.undoStack.pop()
+  if (!snap) return
+  const handWasEmpty = S.hand.length === 0   // 撤的是弃牌 → 牌从弃牌堆飞回
+  Object.assign(S, JSON.parse(snap))
+  S.hand.forEach(c => { if (c.drawn) delete c.drawn })
+  if (handWasEmpty && S.hand.length) {
+    S.hand.forEach(c => { c.drawn = true })
+    fx.drawFrom = 'discard'
+    fx.drawAt++
+  }
+  saveGame()
+}
+
+// 弃牌实际执行：当前手牌移出本局（不洗回）。不自动补牌，由玩家点「结束回合」手动补
+export function doDiscard() {
+  if (!S.hand.length) return
+  pushUndo()
+  S.discarded += S.hand.length
+  S.discardPile.push(...S.hand)
+  S.hand = []
+  saveGame()
+}
+
+export function newGame(seed?: number) {
+  saveHistEntry()  // 上一局真正打过（不管有没有胡）则记入历史
+  // 种子优先级：显式传入 > URL ?seed=（每局固定，方便测试）> 随机
+  S.seed = seed ?? URL_SEED ?? Math.floor(Math.random() * 2 ** 31)
+  S.rngState = { a: S.seed | 0 }
+  S.deck = shuffle(buildDeck(), makeRng(S.rngState))
+  S.hand = []
+  refillHand()   // 开局发牌也走统一路径（触发飞牌动画）
+  S.table = []
+  S.st = freshState()
+  S.hu = 0
+  S.huLog = []
+  S.turns = 0
+  S.placedThisTurn = 0
+  S.undoStack = []
+  S.discarded = 0
+  S.discardPile = []
+  S.run = { tianHu: 0, wangZha: 0, naked: 0 }
+  saveGame()
+}
