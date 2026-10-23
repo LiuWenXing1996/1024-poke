@@ -352,12 +352,17 @@ footer .btn, footer .btn.primary, footer .btn.ghost {
 .btn.ghost { flex: 0 0 76px; font-size: 14px; padding: 0; }
 
 /* ---------- 弹层 ---------- */
+/* 弹层栈：每层独立遮罩 + 居中弹窗，后开的叠在上层（下层被半透明黑压暗） */
 .overlay {
-  position: fixed; inset: 0; background: rgba(6,17,14,.45);
-  display: none; align-items: center; justify-content: center; padding: 24px;
-  backdrop-filter: blur(2px); z-index: 20;
+  position: fixed; inset: 0;
+  display: none; z-index: 20;
 }
-.overlay.show { display: flex; animation: fade .2s; }
+.overlay.show { display: block; animation: fade .2s; }
+.sheet-layer {
+  position: absolute; inset: 0; display: flex;
+  align-items: center; justify-content: center; padding: 24px;
+  background: rgba(6,17,14,.45); backdrop-filter: blur(2px);
+}
 @keyframes fade { from { opacity: 0; } }
 .sheet {  width: 100%; max-width: 380px;
   max-height: min(82vh, 640px);

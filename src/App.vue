@@ -4,7 +4,7 @@ import { HAND_SIZE, TARGET, val } from './engine/engine'
 import { OPS, rankLabel } from './engine/cards'
 import type { Card, OpSymbol } from './engine/types'
 import {
-  S, fx, sheet, closeSheet, openSheet, resumeGame, peekSave, loadHist, deleteHistEntry, clearHist, URL_SEED, toast,
+  S, fx, sheets, closeSheet, openSheet, resumeGame, peekSave, loadHist, deleteHistEntry, clearHist, URL_SEED, toast,
 } from './game/state'
 import {
   place, drawToFull, undo, doDiscard, newGame, doHu,
@@ -14,6 +14,9 @@ import {
 // 启动：复盘链接（?seed=）直接开局；否则弹开始菜单（新游戏 / 继续上局 / 历史记录）
 if (URL_SEED) newGame()
 else openSheet('start')
+
+// 栈顶弹层（脚本侧便捷读取；模板按层遍历 sheets）
+const sheet = computed(() => sheets.value[sheets.value.length - 1] ?? null)
 
 // ---- 总值 ----
 const current = computed(() => val(S.st))
@@ -360,12 +363,12 @@ function numOk(v: number) {
   return S.st.lastOp === '/' ? S.st.curV! % v === 0 : true
 }
 function chooseNum(v: number) {
-  const idx = sheet.value!.payload!.idx as number
+  const idx = sheet.value?.payload?.idx as number
   closeSheet()
   placeWithFly(idx, v)
 }
 function chooseOp(o: OpSymbol) {
-  const idx = sheet.value!.payload!.idx as number
+  const idx = sheet.value?.payload?.idx as number
   closeSheet()
   placeWithFly(idx, o)
 }
@@ -379,10 +382,10 @@ function onHuClick() {
   flyTableToDeck(() => doHu())
 }
 
-// ---- 弹层：牌堆详情 ----
+// ---- 弹层：牌堆详情（取栈中最上层的 pile 实例） ----
 const pileCells = computed(() => {
-  const p = sheet.value
-  if (!p || p.kind !== 'pile') return null
+  const p = [...sheets.value].reverse().find(x => x.kind === 'pile')
+  if (!p || !p.payload) return null
   const cards = p.payload!.cards as Card[]
   const num = Array(14).fill(0)
   let joker = 0, wild = 0
@@ -405,7 +408,7 @@ const pileCells = computed(() => {
 const histVer = ref(0)
 const histRows = computed(() => {
   histVer.value
-  if (sheet.value?.kind !== 'history') return []
+  if (!sheets.value.some(s => s.kind === 'history')) return []
   return loadHist().map((g, i) => {
     const d = new Date(g.ts), p2 = (n: number) => String(n).padStart(2, '0')
     return { n: i + 1, gid: g.gid, hu: g.hu, seed: g.seed, cur: g.gid === S.gid, deck: g.gid === S.gid ? S.deck.length : g.deck, disc: g.gid === S.gid ? S.discarded : g.discarded, hand: g.gid === S.gid ? S.hand.length : g.hand, tbl: g.gid === S.gid ? S.table.length : g.table, time: `${d.getMonth() + 1}/${d.getDate()} ${p2(d.getHours())}:${p2(d.getMinutes())}` }
@@ -441,10 +444,9 @@ function continueSaved() {
   closeSheet()
   if (!resumeGame()) newGame()   // 存档损坏时兜底开新局
 }
-// 从弹层返回：还没开局（开始菜单进来的历史记录）就回到开始菜单
-function leaveSheet() {
-  if (S.deck.length === 0) openSheet('start')
-  else closeSheet()
+// 关闭指定层的弹窗（点该层遮罩或其 × 按钮）
+function closeLayer(li: number) {
+  sheets.value.splice(li, 1)
 }
 
 // ---- 特效：toast / 胡牌 ----
@@ -550,11 +552,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
     <button class="btn ghost" @click="onDrawClick()">补牌</button>
   </footer>
 
-  <!-- 弹层 -->
-  <div class="overlay" :class="{ show: !!sheet }" @click.self="leaveSheet()">
-    <div v-if="sheet" class="sheet" :class="{ wide: ['history', 'huLog', 'pile'].includes(sheet.kind), history: sheet.kind === 'history', help: sheet.kind === 'help' }">
-      <button v-if="sheet.kind !== 'start'" class="sheet-close" title="关闭" @click="leaveSheet()">×</button>
-      <template v-if="sheet.kind === 'help'">
+  <!-- 弹层栈：每层独立实例，后开的叠在上层 -->
+  <div class="overlay" :class="{ show: sheets.length > 0 }">
+    <div v-for="(s, li) in sheets" :key="li" class="sheet-layer" @click.self="closeLayer(li)">
+    <div class="sheet" :class="{ wide: ['history', 'huLog', 'pile'].includes(s.kind), history: s.kind === 'history', help: s.kind === 'help' }">
+      <button v-if="s.kind !== 'start'" class="sheet-close" title="关闭" @click="closeLayer(li)">×</button>
+      <template v-if="s.kind === 'help'">
         <h2>怎么玩</h2>
         <ul class="help-list">
           <li><b>牌桌</b>：牌桌是一整个算式，按四则运算优先级求值</li>
@@ -566,7 +569,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </ul>
       </template>
 
-      <template v-else-if="sheet.kind === 'restart'">
+      <template v-else-if="s.kind === 'restart'">
         <h2>重开</h2>
         <div class="actions start-actions">
           <button class="btn primary" :disabled="!S.deck.length" @click="closeSheet(); newGame(S.seed)">重来本局</button>
@@ -574,7 +577,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </div>
       </template>
 
-      <template v-else-if="sheet.kind === 'pickNum'">
+      <template v-else-if="s.kind === 'pickNum'">
         <h2>这张王当几用</h2>
         <p>选一个数值替它上桌。</p>
         <div class="picker">
@@ -582,7 +585,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </div>
       </template>
 
-      <template v-else-if="sheet.kind === 'pickOp'">
+      <template v-else-if="s.kind === 'pickOp'">
         <h2>任意运算符</h2>
         <p>选一个运算符替它上桌。</p>
         <div class="picker">
@@ -590,7 +593,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </div>
       </template>
 
-      <template v-else-if="sheet.kind === 'pile' && pileCells">
+      <template v-else-if="s.kind === 'pile' && pileCells">
         <h2>{{ pileCells.title }} · {{ pileCells.count }} 张</h2>
         <div class="pgrid">
           <div v-for="(c, i) in pileCells.numCells" :key="'n' + i" class="pcell" :class="{ zero: c.zero }"><b>{{ c.label }}</b><i>{{ c.n }}</i></div>
@@ -600,7 +603,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </div>
       </template>
 
-      <template v-else-if="sheet.kind === 'huLog'">
+      <template v-else-if="s.kind === 'huLog'">
         <h2>胡牌记录 · {{ S.huLog.length }} 胡</h2>
         <div class="sheet-body">
           <template v-if="S.huLog.length">
@@ -613,7 +616,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <div class="actions"><button class="btn primary" @click="closeSheet()">知道了</button></div>
       </template>
 
-      <template v-else-if="sheet.kind === 'history'">
+      <template v-else-if="s.kind === 'history'">
         <div class="sheet-head">
           <h2>历史对局 · {{ histRows.length }} 局</h2>
         </div>
@@ -648,7 +651,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </div>
       </template>
 
-      <template v-else-if="sheet.kind === 'confirmClear'">
+      <template v-else-if="s.kind === 'confirmClear'">
         <h2>清空历史对局</h2>
         <p>确定清空全部历史对局吗？当前对局会保留，此操作不可恢复。</p>
         <div class="actions start-actions">
@@ -657,7 +660,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </div>
       </template>
 
-      <template v-else-if="sheet.kind === 'start'">
+      <template v-else-if="s.kind === 'start'">
         <h2>胡 1024</h2>
         <p>用扑克牌和四则运算凑出恰好 1024。</p>
         <div class="actions start-actions">
@@ -666,6 +669,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           <button class="btn ghost" @click="openSheet('history')">历史记录</button>
         </div>
       </template>
+    </div>
     </div>
   </div>
 

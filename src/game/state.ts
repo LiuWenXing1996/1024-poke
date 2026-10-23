@@ -59,9 +59,11 @@ export const S = reactive<GameState>({
 // ---- UI 轻状态：弹层 + 特效 ----
 export type SheetKind = 'help' | 'start' | 'restart' | 'pickNum' | 'pickOp' | 'pile' | 'huLog' | 'history' | 'confirmClear'
 export interface SheetState { kind: SheetKind; payload?: Record<string, unknown> }
-export const sheet = ref<SheetState | null>(null)
-export const openSheet = (kind: SheetKind, payload?: Record<string, unknown>) => { sheet.value = payload ? { kind, payload } : { kind } }
-export const closeSheet = () => { sheet.value = null }
+
+// 弹窗栈：每个弹窗是独立实例，叠加显示互不挤掉；后开的在上层
+export const sheets = ref<SheetState[]>([])
+export const openSheet = (kind: SheetKind, payload?: Record<string, unknown>) => { sheets.value.push(payload ? { kind, payload } : { kind }) }
+export const closeSheet = () => { sheets.value.pop() }
 
 export const fx = reactive({ toast: '', toastAt: 0, burstAt: 0, drawAt: 0, drawFrom: 'deck' as 'deck' | 'discard', returnAt: 0, returnSlots: [] as number[], undoPlaceAt: 0, undoPlaceSlot: 0 })
 export function toast(msg: string) { fx.toast = msg; fx.toastAt++ }
