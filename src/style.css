@@ -381,7 +381,7 @@ footer .btn, footer .btn.primary, footer .btn.ghost {
 
 /* ---------- 存档卡片 ---------- */
 .save-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
-.sheet.saves { width: min(680px, 94vw); height: min(72vh, 600px); }   /* 存档：固定宽高（原历史弹窗规格） */
+.sheet.saves { width: min(680px, 94vw); max-width: min(680px, 94vw); height: min(72vh, 600px); }   /* 存档：固定宽高（原历史弹窗规格），不被内容撑开 */
 .save-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
 .save-card {
   border: 1px solid rgba(201,169,97,.28); border-radius: 12px;
