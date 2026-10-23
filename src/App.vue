@@ -470,7 +470,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <div v-for="(r, i) in S.huLog" :key="i" class="hurec">
           <i>#{{ i + 1 }}</i>
           <b>{{ r.expr }}</b>
-          <em v-if="r.gains.length">{{ r.gains.join(' ') }}</em>
         </div>
       </div>
     </aside>
@@ -583,7 +582,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <div class="sheet-body">
           <template v-if="S.huLog.length">
             <div v-for="(r, i) in S.huLog" :key="i" class="hurow">
-              <i>#{{ i + 1 }}</i><b>{{ r.expr }}</b><em v-if="r.gains.length">{{ r.gains.join(' ') }}</em>
+              <i>#{{ i + 1 }}</i><b>{{ r.expr }}</b>
             </div>
           </template>
           <p v-else>本局还没有胡牌</p>

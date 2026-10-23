@@ -3,7 +3,6 @@ import { reactive, ref } from 'vue'
 import { freshState } from '../engine/engine'
 import type { Card, EngineState, HuRecord, TableToken } from '../engine/types'
 
-export interface RunStat { tianHu: number; wangZha: number; naked: number }
 export interface HistEntry { gid: number; seed: number; hu: number; ts: number }
 export interface ActionLogEntry { type: 'place' | 'discard' | 'draw' | 'hu'; text: string }
 
@@ -13,11 +12,10 @@ export interface GameState {
   table: TableToken[]
   st: EngineState
   hu: number
-  huLog: HuRecord[]          // 本局胡牌记录：{expr, gains}（点桌角「胡」徽章回看）
+  huLog: HuRecord[]          // 本局胡牌记录：{expr}（点桌角「胡」徽章回看）
   actionLog: ActionLogEntry[] // 本局操作流水（随自动存档持久化；撤销随快照回滚）
   gid: number                // 局 ID（实时入账时用于匹配历史里「当前局」那条，防同 seed 误覆盖）
-  placedThisHand: number     // 距上次胡的连续出牌数（天胡判定用）
-  run: RunStat
+  placedThisHand: number     // 距上次胡的连续出牌数
   undoStack: string[]        // 操作快照（JSON，落子/弃牌前压入；胡牌后清空——胡不可撤销）
   discarded: number          // 本局已弃张数（弃牌移出本局，不洗回）
   discardPile: Card[]        // 弃牌堆实体（供详情查看）
@@ -50,7 +48,6 @@ export const S = reactive<GameState>({
   actionLog: [],
   gid: 0,
   placedThisHand: 0,
-  run: { tianHu: 0, wangZha: 0, naked: 0 },
   undoStack: [],
   discarded: 0,
   discardPile: [],

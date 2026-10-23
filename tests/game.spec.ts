@@ -94,11 +94,8 @@ describe('对局流程', () => {
     expect(S.hu).toBe(1)
     expect(S.table.length).toBe(0)
     expect(S.deck.length).toBe(deckBefore - 6 + 7)
-    expect(S.run.tianHu).toBe(1)   // 距上次胡连续出 7 张（≥4）→ 天胡
-    expect(S.run.naked).toBe(1)    // 裸胡（≤7 张）
     expect(S.huLog.length).toBe(1)
     expect(S.huLog[0].expr).toBe('8 × 8 × 4 × 4')
-    expect(S.huLog[0].gains.join('')).toBe('🥇 天胡🎯 裸胡')
     // 历史实时入账：当前局每步操作即 upsert 进历史，开新局时上一局已带最终数据躺在历史里
     newGame(42)
     const hist = loadHist()

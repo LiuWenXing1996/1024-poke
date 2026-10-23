@@ -3,7 +3,7 @@ import { HAND_SIZE, TARGET, freshState, placeNum, placeOp, val } from '../engine
 import { OP_TO_ENGINE, buildDeck, rankLabel } from '../engine/cards'
 import { makeRng, shuffle } from '../engine/rng'
 import type { Card, OpSymbol } from '../engine/types'
-import { S, URL_SEED, fx, saveGame, upsertHist, store, toast } from './state'
+import { S, URL_SEED, fx, saveGame, upsertHist, store } from './state'
 import type { ActionLogEntry } from './state'
 
 // 返回：null 不可放；{ch} 可直接放；{pick:'num'|'op'} 需要选值/选符号
@@ -40,7 +40,7 @@ function pushUndo() {
     deck: S.deck, hand: S.hand, table: S.table, st: S.st,
     hu: S.hu, huLog: S.huLog, placedThisHand: S.placedThisHand,
     discarded: S.discarded, discardPile: S.discardPile,
-    run: S.run, best: S.best, rngState: S.rngState, actionLog: S.actionLog,
+    best: S.best, rngState: S.rngState, actionLog: S.actionLog,
   }))
   if (S.undoStack.length > UNDO_CAP) S.undoStack.shift()
 }
@@ -88,22 +88,9 @@ export function place(cardIdx: number, ch: number | OpSymbol, opts: { deferHu?: 
 }
 
 export function doHu() {
-  const cardsThisHand = S.placedThisHand
-  const tableLen = S.table.length
-  const jokers = S.table.filter(t => t.card.kind === 'num' && t.card.joker).length
-
-  // 成就
-  const gains: string[] = []
-  if (cardsThisHand >= 4) { S.run.tianHu++; gains.push('🥇 天胡') }
-  if (jokers === 2) { S.run.wangZha++; gains.push('👑 王炸') }
-  if (tableLen <= 7) { S.run.naked++; gains.push('🎯 裸胡') }
-
   // 记录本胡算式（桌面马上要清空）
   const exprText = S.table.map(t => t.card.kind === 'op' ? String(t.ch) : rankLabel(t.ch as number)).join(' ')
-  S.huLog.push({
-    expr: exprText,
-    gains: gains.slice(),
-  })
+  S.huLog.push({ expr: exprText })
 
   // 桌牌洗回牌库
   const rng = makeRng(S.rngState)
@@ -118,7 +105,6 @@ export function doHu() {
   S.undoStack = []
   if (S.hu > S.best) { S.best = S.hu; store.set('h1024.best', String(S.best)) }
   fx.burstAt++
-  if (gains.length) toast(gains.join('  '))
   saveGame()
   upsertHist()
 }
@@ -197,7 +183,6 @@ export function newGame(seed?: number) {
   S.undoStack = []
   S.discarded = 0
   S.discardPile = []
-  S.run = { tianHu: 0, wangZha: 0, naked: 0 }
   saveGame()
   upsertHist()
 }

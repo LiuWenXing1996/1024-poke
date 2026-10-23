@@ -32,4 +32,4 @@ export interface EngineState {
   lastOp: EngineOp | null
 }
 
-export interface HuRecord { expr: string; gains: string[] }
+export interface HuRecord { expr: string }
