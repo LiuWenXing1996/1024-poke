@@ -108,14 +108,15 @@ describe('对局流程', () => {
     expect(S.huLog.length).toBe(1)
     expect(S.huLog[0].expr).toBe('8 × 8 × 4 × 4')
     expect(S.huLog[0].gains.join('')).toBe('🎯 裸胡')
-    // 历史入账：都留——有胡局、未操作的空局各记一笔
+    // 历史实时入账：当前局每步操作即 upsert 进历史，开新局时上一局已带最终数据躺在历史里
     newGame(42)
     const hist = loadHist()
-    expect(hist.length).toBe(1)
-    expect(hist[0].hu).toBe(1)
-    newGame(42)                    // 上一局（未操作的空局）也留档
+    expect(hist.length).toBe(2)          // 刚打完的胡局（实时入账）+ 当前的空局
+    expect(hist[0].hu).toBe(0)           // 当前局（新开，尚未操作）
+    expect(hist[1].hu).toBe(1)           // 上一局实时入账：1 胡
+    newGame(42)
     const hist2 = loadHist()
-    expect(hist2.length).toBe(2)
+    expect(hist2.length).toBe(3)         // 新空局也实时入账
     expect(hist2[0].hu).toBe(0)
     expect(hist2[0].turns).toBe(0)
   })

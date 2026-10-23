@@ -4,7 +4,7 @@ import { freshState } from '../engine/engine'
 import type { Card, EngineState, HuRecord, TableToken } from '../engine/types'
 
 export interface RunStat { tianHu: number; wangZha: number; naked: number }
-export interface HistEntry { seed: number; hu: number; turns: number; ts: number; log?: ActionLogEntry[] }
+export interface HistEntry { gid: number; seed: number; hu: number; turns: number; ts: number }
 export interface ActionLogEntry { turn: number; type: 'place' | 'discard' | 'endTurn'; text: string }
 
 export interface GameState {
@@ -15,6 +15,7 @@ export interface GameState {
   hu: number
   huLog: HuRecord[]          // 本局胡牌记录：{expr, gains}（点桌角「胡」徽章回看）
   actionLog: ActionLogEntry[] // 本局操作流水（按回合标注，随自动存档持久化；撤销随快照回滚）
+  gid: number                // 局 ID（实时入账时用于匹配历史里「当前局」那条，防同 seed 误覆盖）
   placedThisTurn: number
   turns: number              // 已结束的回合数（显示回合 = turns + 1）
   run: RunStat
@@ -48,6 +49,7 @@ export const S = reactive<GameState>({
   hu: 0,
   huLog: [],
   actionLog: [],
+  gid: 0,
   placedThisTurn: 0,
   turns: 0,
   run: { tianHu: 0, wangZha: 0, naked: 0 },
@@ -72,6 +74,7 @@ export function toast(msg: string) { fx.toast = msg; fx.toastAt++ }
 // ---- 持久化 ----
 // 自动存档：整局状态落盘（rngState 可序列化，恢复后随机流从断点接上）
 // 复盘会话（URL 带 ?seed=）不落盘，避免复盘覆盖正在进行的对局
+// 历史入账走 upsertHist（在信息变化点调用：结束回合/胡牌/弃牌/新局）
 export const SAVE_KEY = 'h1024.save'
 export function saveGame() {
   if (URL_SEED) return
@@ -101,12 +104,38 @@ const HIST_CAP = 99999
 export function loadHist(): HistEntry[] {
   try { return JSON.parse(store.get(HIST_KEY) || '[]') as HistEntry[] } catch { return [] }
 }
-export function saveHistEntry() {
-  // 首次启动的 newGame（seed 还是初始值 0）是幽灵局，不记
+let lastLogWriteLen = -1
+export function upsertHist() {
+  // 首次启动的幽灵局（seed 0）不记
   if (S.seed === 0) return
+  // 摘要与流水分桶：历史数组每次全量重写，塞日志会二次方膨胀；
+  // 流水按局 ID 单独一桶，只写当前局（写入成本恒定），历史里随时能按 gid 查
   const hist = loadHist()
-  hist.unshift({ seed: S.seed, hu: S.hu, turns: S.turns, ts: Date.now(), log: S.actionLog.slice(-500) })
+  const entry: HistEntry = { gid: S.gid, seed: S.seed, hu: S.hu, turns: S.turns, ts: Date.now() }
+  if (hist[0]?.gid === S.gid) hist[0] = entry   // 当前局：原地更新（实时存档）
+  else hist.unshift(entry)                      // 新局：插入一条
   writeHist(hist)
+  if (S.actionLog.length !== lastLogWriteLen) {   // 流水没变就不重写桶
+    const logs = loadLogs()
+    logs[String(S.gid)] = S.actionLog.slice(-500)
+    writeLogs(hist, logs)
+    lastLogWriteLen = S.actionLog.length
+  }
+}
+// 操作流水桶：gid -> 流水（每局上限 500 条，随历史条目清理）
+const LOGS_KEY = 'h1024.gamelogs'
+function loadLogs(): Record<string, ActionLogEntry[]> {
+  try { return JSON.parse(store.get(LOGS_KEY) || '{}') as Record<string, ActionLogEntry[]> } catch { return {} }
+}
+function writeLogs(hist: HistEntry[], logs: Record<string, ActionLogEntry[]>) {
+  // 只保留历史里还在的局，防流水桶无限膨胀
+  const alive = new Set(hist.map(h => String(h.gid)))
+  const pruned: Record<string, ActionLogEntry[]> = {}
+  for (const [gid, log] of Object.entries(logs)) if (alive.has(gid)) pruned[gid] = log
+  try { store.set(LOGS_KEY, JSON.stringify(pruned)) } catch { /* 配额满：流水是附属数据，静默放弃 */ }
+}
+export function loadGameLog(gid: number): ActionLogEntry[] {
+  return loadLogs()[String(gid)] ?? []
 }
 function writeHist(hist: HistEntry[]) {
   // 写满会顶爆 localStorage 配额且静默失败——对半裁直到写得进
@@ -117,9 +146,14 @@ function writeHist(hist: HistEntry[]) {
 export function deleteHistEntry(index: number) {
   const hist = loadHist()
   if (index < 0 || index >= hist.length) return
-  hist.splice(index, 1)
+  const [gone] = hist.splice(index, 1)
   writeHist(hist)
+  const logs = loadLogs()
+  if (gone && delete logs[String(gone.gid)]) writeLogs(hist, logs)
 }
 export function clearHist() {
-  try { localStorage.removeItem(HIST_KEY) } catch { /* noop */ }
+  try {
+    localStorage.removeItem(HIST_KEY)
+    localStorage.removeItem(LOGS_KEY)
+  } catch { /* noop */ }
 }

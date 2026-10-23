@@ -3,7 +3,7 @@ import { HAND_SIZE, TARGET, freshState, placeNum, placeOp, val } from '../engine
 import { OP_TO_ENGINE, buildDeck, rankLabel } from '../engine/cards'
 import { makeRng, shuffle } from '../engine/rng'
 import type { Card, OpSymbol } from '../engine/types'
-import { S, URL_SEED, fx, saveGame, saveHistEntry, store, toast } from './state'
+import { S, URL_SEED, fx, saveGame, upsertHist, store, toast } from './state'
 import type { ActionLogEntry } from './state'
 
 // 返回：null 不可放；{ch} 可直接放；{pick:'num'|'op'} 需要选值/选符号
@@ -116,6 +116,7 @@ export function doHu() {
   fx.burstAt++
   if (gains.length) toast(gains.join('  '))
   saveGame()
+  upsertHist()
 }
 
 export function endTurn() {
@@ -127,6 +128,7 @@ export function endTurn() {
   S.turns++
   S.undoStack = []          // 回合结束即定局，跨回合不可撤销
   saveGame()
+  upsertHist()
 }
 
 // 撤销本回合上一次操作（落子/弃牌，快照式回滚；跨回合后不可用）
@@ -154,10 +156,13 @@ export function doDiscard() {
   S.hand = []
   logOp('discard', `弃牌：${labels}`)
   saveGame()
+  upsertHist()
 }
 
+let gidSeq = 0
 export function newGame(seed?: number) {
-  saveHistEntry()  // 上一局真正打过（不管有没有胡）则记入历史
+  // 局 ID：时间戳 + 序号（防同毫秒开局撞号，重来本局同 seed 也不会误覆盖历史）
+  S.gid = Date.now() * 1000 + (++gidSeq % 1000)
   // 种子优先级：显式传入 > URL ?seed=（每局固定，方便测试）> 随机
   S.seed = seed ?? URL_SEED ?? Math.floor(Math.random() * 2 ** 31)
   S.rngState = { a: S.seed | 0 }
@@ -176,4 +181,5 @@ export function newGame(seed?: number) {
   S.discardPile = []
   S.run = { tianHu: 0, wangZha: 0, naked: 0 }
   saveGame()
+  upsertHist()
 }
