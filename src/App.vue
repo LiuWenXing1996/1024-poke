@@ -408,7 +408,7 @@ const histRows = computed(() => {
   if (sheet.value?.kind !== 'history') return []
   return loadHist().map((g, i) => {
     const d = new Date(g.ts), p2 = (n: number) => String(n).padStart(2, '0')
-    return { n: i + 1, hu: g.hu, seed: g.seed, cur: g.gid === S.gid, time: `${d.getMonth() + 1}/${d.getDate()} ${p2(d.getHours())}:${p2(d.getMinutes())}` }
+    return { n: i + 1, gid: g.gid, hu: g.hu, seed: g.seed, cur: g.gid === S.gid, time: `${d.getMonth() + 1}/${d.getDate()} ${p2(d.getHours())}:${p2(d.getMinutes())}` }
   })
 })
 
@@ -624,13 +624,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           <template v-if="histRows.length">
             <table class="hist-tbl">
               <thead>
-                <tr><th>当前</th><th>胡数</th><th>时间</th><th>种子</th><th></th></tr>
+                <tr><th>当前</th><th>胡数</th><th>时间</th><th>对局 ID</th><th>种子</th><th></th></tr>
               </thead>
               <tbody>
                 <tr v-for="g in histRows" :key="g.n">
                   <td class="curcell"><span v-if="g.cur" class="cur-tag">当前</span></td>
                   <td><b>{{ g.hu }} 胡</b></td>
                   <td>{{ g.time }}</td>
+                  <td class="gid">{{ g.gid }}</td>
                   <td class="seed">{{ g.seed }}</td>
                   <td class="ops">
                     <button class="replay-btn" title="用该种子重开一局" @click="replaySeed(g.seed)">重开</button>

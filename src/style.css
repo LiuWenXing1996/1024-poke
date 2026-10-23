@@ -77,6 +77,7 @@ header {
 .hist-tbl tbody tr:last-child td { border-bottom: none; }
 .hist-tbl td b { font-weight: 600; font-size: 15px; letter-spacing: .04em; }
 .hist-tbl td.seed { color: var(--text-dim); }
+.hist-tbl td.gid { color: var(--text-dim); font-size: 11px; }
 .hist-tbl td.ops { text-align: right; white-space: nowrap; }
 .cur-tag {
   display: inline-block; padding: 2px 7px;
