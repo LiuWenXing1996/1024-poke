@@ -173,6 +173,12 @@ describe('对局流程', () => {
     drawToFull()                                  // 手动点「补牌」
     expect(S.hand.length).toBe(HAND_SIZE)
     expect(S.deck.length).toBe(deckBefore - HAND_SIZE)
+    undo()                                        // 补牌也可撤销
+    expect(S.hand.length).toBe(0)
+    expect(S.deck.length).toBe(deckBefore)
+    drawToFull()
+    expect(S.hand.length).toBe(HAND_SIZE)
+    expect(S.deck.length).toBe(deckBefore - HAND_SIZE)
     expect(S.hand.length + S.table.length + S.deck.length + S.discarded).toBe(108)
     doDiscard()
     expect(S.discarded).toBe(12)

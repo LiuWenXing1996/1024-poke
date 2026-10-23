@@ -127,6 +127,7 @@ export function doHu() {
 // 补牌：从牌库补满手牌（手牌已满或牌库空则不动，返回 false 供 UI 轻提示）
 export function drawToFull(): boolean {
   if (S.hand.length >= HAND_SIZE || !S.deck.length) return false
+  pushUndo()
   const before = S.hand.length
   refillHand()
   logOp('draw', `补牌 ${S.hand.length - before} 张`)
