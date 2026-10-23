@@ -4,6 +4,7 @@ import { OP_TO_ENGINE, buildDeck, rankLabel } from '../engine/cards'
 import { makeRng, shuffle } from '../engine/rng'
 import type { Card, OpSymbol } from '../engine/types'
 import { S, URL_SEED, fx, saveGame, saveHistEntry, store, toast } from './state'
+import type { ActionLogEntry } from './state'
 
 // 返回：null 不可放；{ch} 可直接放；{pick:'num'|'op'} 需要选值/选符号
 export function placementFor(card: Card): { ch?: number | OpSymbol; pick?: 'num' | 'op' } | null {
@@ -39,9 +40,18 @@ function pushUndo() {
     deck: S.deck, hand: S.hand, table: S.table, st: S.st,
     hu: S.hu, huLog: S.huLog, placedThisTurn: S.placedThisTurn,
     discarded: S.discarded, discardPile: S.discardPile,
-    run: S.run, best: S.best, rngState: S.rngState,
+    run: S.run, best: S.best, rngState: S.rngState, actionLog: S.actionLog,
   }))
   if (S.undoStack.length > UNDO_CAP) S.undoStack.shift()
+}
+
+// ---- 操作流水：每局按回合记录放牌/弃牌/结束回合（撤销随快照回滚） ----
+function logOp(type: ActionLogEntry['type'], text: string) {
+  S.actionLog.push({ turn: S.turns + 1, type, text })
+}
+function cardLabel(c: Card): string {
+  if (c.kind === 'op') return c.wild ? '?✦' : c.o!
+  return c.joker ? '✦' : rankLabel(c.v)
 }
 
 // 从牌库补牌至上限（回合开始/胡牌后共用）；新抽的牌标记 drawn（发牌动画，App 里逐张飞入）
@@ -69,6 +79,7 @@ export function place(cardIdx: number, ch: number | OpSymbol, opts: { deferHu?: 
   S.table.push({ card, ch })
   S.hand.splice(cardIdx, 1)
   S.placedThisTurn++
+  logOp('place', `出 ${card.kind === 'op' ? String(ch) : rankLabel(ch as number)}，总值 ${val(S.st)}`)
   saveGame()
   const hu = S.st.last === 'n' && val(S.st) === TARGET
   if (hu && !opts.deferHu) doHu()     // UI 传 deferHu：先播飞牌动画，再手动 doHu 结算
@@ -110,6 +121,7 @@ export function doHu() {
 export function endTurn() {
   // 满手牌无法结束回合（无牌可补）；不满即补满并进入下一回合
   if (S.hand.length >= HAND_SIZE) return
+  logOp('endTurn', '结束回合')
   refillHand()
   S.placedThisTurn = 0
   S.turns++
@@ -136,9 +148,11 @@ export function undo() {
 export function doDiscard() {
   if (!S.hand.length) return
   pushUndo()
+  const labels = S.hand.map(cardLabel).join(' ')
   S.discarded += S.hand.length
   S.discardPile.push(...S.hand)
   S.hand = []
+  logOp('discard', `弃牌：${labels}`)
   saveGame()
 }
 
@@ -154,6 +168,7 @@ export function newGame(seed?: number) {
   S.st = freshState()
   S.hu = 0
   S.huLog = []
+  S.actionLog = []
   S.turns = 0
   S.placedThisTurn = 0
   S.undoStack = []

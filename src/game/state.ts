@@ -4,7 +4,8 @@ import { freshState } from '../engine/engine'
 import type { Card, EngineState, HuRecord, TableToken } from '../engine/types'
 
 export interface RunStat { tianHu: number; wangZha: number; naked: number }
-export interface HistEntry { seed: number; hu: number; turns: number; ts: number }
+export interface HistEntry { seed: number; hu: number; turns: number; ts: number; log?: ActionLogEntry[] }
+export interface ActionLogEntry { turn: number; type: 'place' | 'discard' | 'endTurn'; text: string }
 
 export interface GameState {
   deck: Card[]
@@ -13,6 +14,7 @@ export interface GameState {
   st: EngineState
   hu: number
   huLog: HuRecord[]          // 本局胡牌记录：{expr, gains}（点桌角「胡」徽章回看）
+  actionLog: ActionLogEntry[] // 本局操作流水（按回合标注，随自动存档持久化；撤销随快照回滚）
   placedThisTurn: number
   turns: number              // 已结束的回合数（显示回合 = turns + 1）
   run: RunStat
@@ -45,6 +47,7 @@ export const S = reactive<GameState>({
   st: freshState(),
   hu: 0,
   huLog: [],
+  actionLog: [],
   placedThisTurn: 0,
   turns: 0,
   run: { tianHu: 0, wangZha: 0, naked: 0 },
@@ -102,7 +105,7 @@ export function saveHistEntry() {
   // 首次启动的 newGame（seed 还是初始值 0）是幽灵局，不记
   if (S.seed === 0) return
   const hist = loadHist()
-  hist.unshift({ seed: S.seed, hu: S.hu, turns: S.turns, ts: Date.now() })
+  hist.unshift({ seed: S.seed, hu: S.hu, turns: S.turns, ts: Date.now(), log: S.actionLog.slice(-500) })
   writeHist(hist)
 }
 function writeHist(hist: HistEntry[]) {
