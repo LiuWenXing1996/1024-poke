@@ -359,19 +359,27 @@ footer .btn, footer .btn.primary, footer .btn.ghost {
 }
 .overlay.show { display: flex; animation: fade .2s; }
 @keyframes fade { from { opacity: 0; } }
-.sheet {
-  width: 100%; max-width: 380px;
+.sheet {  width: 100%; max-width: 380px;
   max-height: min(82vh, 640px);
   display: flex; flex-direction: column;
-  overflow: hidden;
+  overflow: hidden; position: relative;
   background: #0e2a23; border: 1px solid rgba(201,169,97,.28);
   border-radius: 18px; padding: 22px 20px;
   box-shadow: 0 30px 60px -20px #000;
 }
+.sheet-close {
+  position: absolute; top: 14px; right: 14px; z-index: 2;
+  width: 28px; height: 28px; border: none; border-radius: 50%; cursor: pointer;
+  background: transparent; color: rgba(232,227,214,.35);
+  font-size: 16px; line-height: 1; padding: 0;
+  transition: color .15s, background .15s;
+}
+.sheet-close:hover { color: var(--text); background: rgba(232,227,214,.08); }
 .sheet.wide { max-width: 560px; }   /* 长列表弹层：历史/胡牌记录/牌库详情 */
 .sheet.help { max-width: 500px; }   /* 帮助：六条说明更舒展 */
 .sheet.history { width: min(680px, 94vw); height: min(72vh, 600px); }   /* 历史对局：固定宽高，不随行数变化 */
 .sheet.history .sheet-body { overflow-x: auto; }   /* 列多时横向滚动兜底 */
+.sheet.history .clear-btn { margin-right: 36px; }   /* 给右上角关闭按钮让位 */
 .sheet-head { display: flex; align-items: center; justify-content: space-between; }
 .clear-btn {
   border: 1px solid transparent; border-radius: 999px; cursor: pointer;
