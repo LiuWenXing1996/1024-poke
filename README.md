@@ -10,11 +10,23 @@
 
 胡牌后桌上的牌洗回牌库，胡数 +1，继续下一手。**分数 = 胡牌次数**，看你在牌库耗尽前能胡多少。
 
+## 预览
+
+| 开局 | 胡牌瞬间 | 存档 |
+|---|---|---|
+| ![开局](截图/初始.png) | ![胡牌](截图/胡牌.png) | ![存档](截图/存档.png) |
+
 ## 在线体验
 
 **https://hu-1024-card-game.app.workbuddy.host/?sharecode=LCYB3HECRH**
 
 免登录，浏览器打开即玩。
+
+## 预览
+
+| 开局 | 胡牌 | 存档 |
+|---|---|---|
+| ![开局](screenshots/start.png) | ![胡牌](screenshots/hu.png) | ![存档](screenshots/saves.png) |
 
 ## 玩法
 
