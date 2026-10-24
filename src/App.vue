@@ -677,7 +677,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <div class="actions start-actions">
           <button class="btn primary" @click="startNewGame()">新游戏</button>
           <button v-if="savedInfo" class="btn ghost" @click="continueSaved()">继续上局 · {{ savedInfo.hu }} 胡</button>
-          <button class="btn ghost" @click="openSheet('saves')">存档管理</button>
+          <button class="btn ghost" @click="openSheet('saves')">存档</button>
         </div>
       </template>
     </div>
