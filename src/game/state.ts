@@ -130,6 +130,7 @@ function gameSnapshot(): string {
 }
 // 当前局快照落槽（ts=最近游玩时间，随入账刷新）
 function syncSaveSlot() {
+  if (S.seed === 0) return   // 首次启动的幽灵局（未开局）不落槽
   const states = loadStates()
   states[String(S.gid)] = { ts: Date.now(), snap: gameSnapshot() }
   writeStates(states)

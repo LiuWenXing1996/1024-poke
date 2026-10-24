@@ -412,9 +412,11 @@ const saveCards = computed(() => {
   return Object.entries(loadStates())
     .map(([gid, slot]) => {
       const st = JSON.parse(slot.snap) as { hu: number; seed: number; deck: Card[]; discarded: number; hand: Card[]; table: Card[] }
+      if (Number(gid) === 0 || st.seed === 0) return null   // 幽灵局不显示
       const d = new Date(slot.ts), p2 = (n: number) => String(n).padStart(2, '0')
       return { gid: Number(gid), ts: slot.ts, hu: st.hu, seed: st.seed, cur: Number(gid) === S.gid, deck: st.deck.length, disc: st.discarded, hand: st.hand.length, tbl: st.table.length, time: `${d.getMonth() + 1}/${d.getDate()} ${p2(d.getHours())}:${p2(d.getMinutes())}` }
     })
+    .filter(x => x !== null)
     .sort((a, b) => b.ts - a.ts)
 })
 
