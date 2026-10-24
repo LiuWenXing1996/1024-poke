@@ -664,7 +664,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
       <template v-else-if="s.kind === 'confirmClearSave'">
         <h2>清空存档</h2>
-        <p>确定清空全部存档吗？当前对局的存档会保留，此操作不可恢复。</p>
+        <p>确定清空全部存档吗？此操作不可恢复。</p>
         <div class="actions start-actions">
           <button class="btn danger" @click="clearAllSaves">确认清空</button>
           <button class="btn ghost" @click="closeSheet()">取消</button>
