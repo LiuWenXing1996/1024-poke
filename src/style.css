@@ -396,6 +396,7 @@ footer .btn, footer .btn.primary, footer .btn.ghost {
 .save-meta.dim { color: var(--text-dim); font-size: 11px; }
 .save-ops { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
 .save-ops .replay-btn.primary { background: linear-gradient(180deg, #d8bb78, #b99a52); color: #1d1a12; border-color: transparent; font-weight: 600; }
+.save-ops .replay-btn.primary:disabled { background: rgba(232,227,214,.05); color: rgba(232,227,214,.28); border-color: rgba(232,227,214,.14); font-weight: 400; }
 .save-ops .replay-btn.del:hover:not(:disabled) { color: #ff8f85; border-color: rgba(255,143,133,.5); }
 /* 开始菜单：三个入口完全同宽同高（覆盖 .sheet .actions .btn 等既有规则） */
 .start-actions { flex-direction: column; gap: 10px; }
