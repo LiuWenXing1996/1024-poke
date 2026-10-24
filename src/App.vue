@@ -500,6 +500,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
     <aside class="hu-panel">
       <div class="hu-head">
         <h3>胡牌记录</h3>
+        <span v-if="S.name" class="cur-save" title="当前对局">{{ S.name }}</span>
       </div>
       <p v-if="!S.huLog.length" class="hu-empty">胡了会显示在这里</p>
       <div v-else class="hu-list">
