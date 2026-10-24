@@ -419,7 +419,12 @@ const saveCards = computed(() => {
 })
 
 function openSave(gid: number) {
-  if (restoreGame(gid)) { histVer.value++; closeSheet() }   // 恢复成功即关掉存档弹窗，露出桌面
+  if (restoreGame(gid)) {
+    histVer.value++
+    closeSheet()   // 关掉存档层
+    // 若从开局弹窗进来，把栈底的开局层也清掉——已经打开对局了，不该再回到开局
+    sheets.value = sheets.value.filter(x => x.kind !== 'start')
+  }
 }
 function deleteSaveSlot(gid: number) {
   deleteSave(gid)
