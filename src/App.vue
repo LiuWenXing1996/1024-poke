@@ -568,7 +568,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   <!-- 弹层栈：每层独立实例，后开的叠在上层 -->
   <div class="overlay" :class="{ show: sheets.length > 0 }">
     <div v-for="(s, li) in sheets" :key="li" class="sheet-layer" @click.self="s.kind !== 'start' && closeLayer(li)">
-    <div class="sheet" :class="{ wide: ['huLog', 'pile', 'saves'].includes(s.kind), help: s.kind === 'help' }">
+    <div class="sheet" :class="{ wide: ['huLog', 'pile'].includes(s.kind), saves: s.kind === 'saves', help: s.kind === 'help' }">
       <button v-if="s.kind !== 'start'" class="sheet-close" title="关闭" @click="closeLayer(li)">×</button>
       <template v-if="s.kind === 'help'">
         <h2>怎么玩</h2>
