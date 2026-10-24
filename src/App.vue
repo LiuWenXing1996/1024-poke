@@ -411,10 +411,10 @@ const saveCards = computed(() => {
   if (!sheets.value.some(s => s.kind === 'saves')) return []
   return Object.entries(loadStates())
     .map(([gid, slot]) => {
-      const st = JSON.parse(slot.snap) as { hu: number; seed: number; deck: Card[]; discarded: number; hand: Card[]; table: Card[] }
+      const st = JSON.parse(slot.snap) as { name: string; hu: number; seed: number; deck: Card[]; discarded: number; hand: Card[]; table: Card[] }
       if (Number(gid) === 0 || st.seed === 0) return null   // 幽灵局不显示
       const d = new Date(slot.ts), p2 = (n: number) => String(n).padStart(2, '0')
-      return { gid: Number(gid), ts: slot.ts, hu: st.hu, seed: st.seed, cur: Number(gid) === S.gid, deck: st.deck.length, disc: st.discarded, hand: st.hand.length, tbl: st.table.length, time: `${d.getMonth() + 1}/${d.getDate()} ${p2(d.getHours())}:${p2(d.getMinutes())}` }
+      return { gid: Number(gid), ts: slot.ts, name: st.name || '未命名', hu: st.hu, seed: st.seed, cur: Number(gid) === S.gid, deck: st.deck.length, disc: st.discarded, hand: st.hand.length, tbl: st.table.length, time: `${d.getMonth() + 1}/${d.getDate()} ${p2(d.getHours())}:${p2(d.getMinutes())}` }
     })
     .filter(x => x !== null)
     .sort((a, b) => b.ts - a.ts)
@@ -636,8 +636,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
             <div class="save-grid">
               <div v-for="c in saveCards" :key="c.gid" class="save-card" :class="{ cur: c.cur }">
                 <div class="save-head">
-                  <b class="save-id">{{ c.gid }}</b>
+                  <b class="save-name">{{ c.name }}</b>
                   <span v-if="c.cur" class="cur-tag">当前</span>
+                  <span class="save-id">#{{ c.gid }}</span>
                 </div>
                 <div class="save-meta">
                   <span>胡 {{ c.hu }}</span>

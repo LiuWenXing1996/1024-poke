@@ -14,6 +14,7 @@ export interface GameState {
   huLog: HuRecord[]          // 本局胡牌记录：{expr}（点桌角「胡」徽章回看）
   actionLog: ActionLogEntry[] // 本局操作流水（随自动存档持久化；撤销随快照回滚）
   gid: number                // 局 ID（存档槽主键，防同毫秒开局撞号）
+  name: string               // 存档名：开局那一刻生成「第 N 局」，终身不变
   placedThisHand: number     // 距上次胡的连续出牌数
   undoStack: string[]        // 操作快照（JSON，落子/弃牌前压入；胡牌后清空——胡不可撤销）
   discarded: number          // 本局已弃张数（弃牌移出本局，不洗回）
@@ -46,6 +47,7 @@ export const S = reactive<GameState>({
   huLog: [],
   actionLog: [],
   gid: 0,
+  name: '',
   placedThisHand: 0,
   undoStack: [],
   discarded: 0,

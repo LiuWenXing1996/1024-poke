@@ -168,6 +168,10 @@ export function newGame(seed?: number) {
   upsertSave(true)   // 上一局的最终存档落账（seed 0 的幽灵局自动跳过）
   // 局 ID：时间戳 + 序号（防同毫秒开局撞号，重来本局同 seed 也不会误覆盖历史）
   S.gid = Date.now() * 1000 + (++gidSeq % 1000)
+  // 存档名：开局那一刻生成「第 N 局」，终身不变（计数器持久化，跨会话累加）
+  const nameSeq = (Number(store.get('h1024.nameseq')) || 0) + 1
+  store.set('h1024.nameseq', String(nameSeq))
+  S.name = `第 ${nameSeq} 局`
   // 种子优先级：显式传入 > URL ?seed=（每局固定，方便测试）> 随机
   S.seed = seed ?? URL_SEED ?? Math.floor(Math.random() * 2 ** 31)
   S.rngState = { a: S.seed | 0 }
