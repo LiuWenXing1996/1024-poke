@@ -439,7 +439,9 @@ function clearAllSaves() {
 
 // 用存档里的种子重开一局（同种子重洗，非恢复进度）
 function replaySeed(seed: number) {
-  closeSheet()
+  closeSheet()   // 关掉存档层
+  // 从开局弹窗进来的话，把栈里的开局层也清掉——已经开新局了，不该再回到开局
+  sheets.value = sheets.value.filter(x => x.kind !== 'start')
   newGame(seed)
 }
 
