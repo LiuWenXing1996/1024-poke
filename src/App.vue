@@ -419,7 +419,7 @@ const saveCards = computed(() => {
 })
 
 function openSave(gid: number) {
-  if (restoreGame(gid)) histVer.value++
+  if (restoreGame(gid)) { histVer.value++; closeSheet() }   // 恢复成功即关掉存档弹窗，露出桌面
 }
 function deleteSaveSlot(gid: number) {
   deleteSave(gid)
