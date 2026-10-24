@@ -639,9 +639,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                 </div>
                 <div class="save-meta dim">最近游玩 {{ c.time }} · 种子 {{ c.seed }}</div>
                 <div class="save-ops">
-                  <button v-if="!c.cur" class="replay-btn primary" @click="openSave(c.gid)">打开</button>
+                  <button class="replay-btn primary" :disabled="c.cur" @click="openSave(c.gid)">打开</button>
                   <button class="replay-btn" @click="replaySeed(c.seed)">重开</button>
-                  <button v-if="!c.cur" class="replay-btn del" title="删除存档" @click="openSheet('confirmDelSave', { gid: c.gid })">删除</button>
+                  <button class="replay-btn del" title="删除存档" :disabled="c.cur" @click="openSheet('confirmDelSave', { gid: c.gid })">删除</button>
                 </div>
               </div>
             </div>

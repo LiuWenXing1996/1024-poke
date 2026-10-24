@@ -81,7 +81,8 @@ header {
   font-family: inherit; font-size: 11px; letter-spacing: .08em;
   transition: background .15s, border-color .15s;
 }
-.replay-btn:hover { background: rgba(201,169,97,.15); border-color: rgba(201,169,97,.6); }
+.replay-btn:hover:not(:disabled) { background: rgba(201,169,97,.15); border-color: rgba(201,169,97,.6); }
+.replay-btn:disabled { color: rgba(232,227,214,.28); border-color: rgba(232,227,214,.14); cursor: not-allowed; }
 .icon-btn {
   width: 30px; height: 30px; border-radius: 50%;
   border: 1px solid rgba(201,169,97,.4); background: transparent; color: var(--gold);
